@@ -42,6 +42,7 @@ Tồn đọng baseline:
 - [x] Chỉ rõ ký tự sai/thừa/thiếu.
 - [x] Thiếu 1 ký tự không làm phần sau sai hàng loạt.
 - [x] Responsive mobile.
+- [x] Hotfix UI: bỏ kiểu ô đỏ dày đặc, không hiện `SP`, chỉ nhấn nhẹ phần sai/missing.
 
 ### Phase 2 — Random thông minh + ôn lỗi
 - [x] Lưu đúng/sai theo prompt bằng `localStorage`.
@@ -58,7 +59,9 @@ Tồn đọng baseline:
 
 ### Phase 4 — Nghe rồi gõ
 - [x] Dùng Web Speech API đọc prompt.
-- [x] Ưu tiên giọng `vi-VN`, fallback giọng mặc định.
+- [x] Chỉ dùng voice tiếng Việt (`vi-*`), không fallback sang giọng sai ngôn ngữ.
+- [x] Có lựa chọn **Giọng đọc tiếng Việt** trong cài đặt nếu thiết bị có nhiều voice.
+- [x] Nếu thiết bị chưa có voice Việt: không đọc, báo rõ cho phụ huynh.
 - [x] Nút **Nghe rồi gõ / Hiện chữ**.
 - [x] Nút **Nghe lại**.
 - [x] Khi bật: ẩn chữ, giữ hình minh họa.
@@ -102,7 +105,7 @@ Tồn đọng baseline:
 ### 2026-08-14 — Phase 1
 
 - Dùng Levenshtein để căn chỉnh `Cần gõ` / `Bé gõ`.
-- Sai/thừa/thiếu tô đỏ; thiếu dùng `□`, khoảng trắng sai dùng `␠`.
+- Sai/thừa/thiếu được chỉ rõ theo vị trí.
 - PR #1 squash merge, commit `1e8450b`.
 
 ### 2026-08-14 — Phase 2
@@ -125,24 +128,30 @@ Tồn đọng baseline:
 - Asset: Twemoji SVG, ghim `jdecked/twemoji@17.0.3` trên jsDelivr.
 - Fallback emoji nếu SVG lỗi/mất mạng.
 - Thêm `THIRD_PARTY.md` attribution CC BY 4.0.
-- `node --check visual-data.js` và `visual-prompt.js`: đạt.
 - PR #3 squash merge, commit `e0fe068`.
 
 ### 2026-08-14 — Phase 4
 
 - Tạo `listen-mode.js`, `listen-mode.css`.
 - Dùng `window.speechSynthesis` + `SpeechSynthesisUtterance`.
-- Ưu tiên voice có `lang=vi-VN`, sau đó voice bắt đầu bằng `vi`, cuối cùng để browser chọn giọng mặc định.
-- Utterance đặt `lang="vi-VN"`, tốc độ `0.82`, pitch `1`.
-- Âm lượng speech tôn trọng `masterVolume` và tùy chọn giảm âm lượng hiện có.
-- Trước khi đọc mới gọi `speechSynthesis.cancel()` để không xếp chồng nhiều câu.
-- Lắng nghe `voiceschanged` vì danh sách giọng có thể tải muộn.
-- Thêm nút **🎧 Nghe rồi gõ**, **🔊 Nghe lại**; khi bật thì chữ prompt bị che bằng `🔊 Hãy nghe rồi gõ` nhưng hình Phase 3 vẫn còn.
-- Nếu trình duyệt không có Speech Synthesis, nút bị disable và hiện thông báo nhẹ.
-- Khi chuyển sang Nâng cao/Tự do, listen mode tự tắt và dừng speech.
-- Random thông minh, ghi lỗi và Ôn lại của Phase 2 tiếp tục hoạt động nguyên vẹn.
-- `node --check listen-mode.js`: đạt.
-- Phạm vi Phase 4: `listen-mode.js`, `listen-mode.css`, `styles.css`, `index.html`, `HANDOFF.md`.
+- Ban đầu ưu tiên voice `vi-VN` nhưng vẫn fallback sang giọng mặc định nếu không tìm thấy voice Việt.
+- Thêm nút **🎧 Nghe rồi gõ**, **🔊 Nghe lại**.
+- Random thông minh, ghi lỗi và Ôn lại tiếp tục hoạt động.
+- PR #4 squash merge, commit `6cc6b00`.
+
+### 2026-08-14 — Hotfix UX: báo lỗi + giọng đọc tiếng Việt
+
+- Người dùng phản hồi khối báo lỗi nhìn quá nặng vì mỗi ký tự bị đóng thành ô đỏ, đặc biệt khi mới gõ 1 chữ.
+- Thêm `ux-hotfix.js`, `ux-hotfix.css` để sửa cách trình bày mà vẫn giữ thuật toán Levenshtein Phase 1.
+- Dòng **Cần gõ** hiển thị như chữ bình thường; chỉ phần sai/thiếu được nhấn đỏ nhẹ.
+- Dòng **Bé gõ** chỉ hiển thị nội dung bé đã gõ; không tạo hàng loạt ô placeholder cho phần chưa gõ.
+- Không còn hiển thị `SP`/ký hiệu chữ cho dấu cách; dấu cách giữ đúng khoảng trắng tự nhiên.
+- Hotfix voice chỉ chấp nhận voice có `lang` bắt đầu bằng `vi`.
+- Không còn fallback sang voice mặc định khác ngôn ngữ.
+- Thêm select **Giọng đọc tiếng Việt** trong Settings; lưu lựa chọn bằng key `goChuVer2.viVoice.v1`.
+- Nếu không có voice Việt, web khóa chức năng nghe và báo rõ thay vì đọc sai.
+- Tốc độ đọc mặc định hotfix giảm từ `0.82` xuống `0.76` để dễ nghe hơn với trẻ.
+- Phạm vi hotfix: `ux-hotfix.js`, `ux-hotfix.css`, `styles.css`, `index.html`, `HANDOFF.md`.
 
 ## 5. Kế hoạch Phase 5 — Đọc, nhớ, rồi gõ
 
@@ -151,14 +160,15 @@ Mục tiêu: thêm bài tập trí nhớ ngắn sau khi bé đã quen nhìn/gõ 
 Plan:
 
 1. Tạo chế độ phụ **Nhớ rồi gõ** trong Đơn giản.
-2. Hiện chữ 3–5 giây rồi tự che; hình có thể giữ lại.
+2. Hiện chữ vài giây rồi tự che; hình minh họa có thể giữ lại.
 3. Có đồng hồ đếm ngược nhỏ, không tạo áp lực điểm số.
 4. Mức 1: 2 từ; mức 2: 3 từ; mức 3: 4 từ.
 5. Không đưa câu dài vào Memory Mode ở giai đoạn đầu.
 6. Cho phụ huynh chỉnh 3 / 5 / 7 giây.
 7. Gõ sai vẫn dùng Phase 1; prompt yếu vẫn dùng Phase 2.
-8. Mobile không để timer/controls đẩy input khỏi màn hình.
-9. Mọi code + quyết định tiếp tục cập nhật HANDOFF trong cùng PR.
+8. Memory Mode và Nghe rồi gõ phải loại trừ nhau để tránh một prompt vừa bị che vừa tự đọc.
+9. Mobile không để timer/controls đẩy input khỏi màn hình.
+10. Mọi code + quyết định tiếp tục cập nhật HANDOFF trong cùng PR.
 
 ## 6. Việc còn tồn đọng
 
