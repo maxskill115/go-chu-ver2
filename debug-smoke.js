@@ -103,6 +103,24 @@ function runGoChuSmokeTests(){
         test("Standalone mode stats", false, error.message);
     }
 
+    try {
+        const settingsButton = document.getElementById("settingsToggleBtn");
+        const gameButton = document.getElementById("game-menu");
+        const profileButton = document.getElementById("profileDashboardBtn");
+        const resultEl = document.getElementById("result");
+        const gameCard = document.querySelector(".game-selector-card");
+        const profileCard = document.querySelector(".profile-dashboard-card");
+
+        test("A11y: Settings có aria-controls", settingsButton?.getAttribute("aria-controls") === "settingsPanel");
+        test("A11y: Game menu có aria-controls", gameButton?.getAttribute("aria-controls") === "game-selector-overlay");
+        test("A11y: Profile có aria-controls", profileButton?.getAttribute("aria-controls") === "profileDashboardOverlay");
+        test("A11y: result có aria-live", resultEl?.getAttribute("aria-live") === "polite");
+        test("A11y: game selector là dialog", gameCard?.getAttribute("role") === "dialog" && gameCard?.getAttribute("aria-modal") === "true");
+        test("A11y: profile dashboard là dialog", profileCard?.getAttribute("role") === "dialog" && profileCard?.getAttribute("aria-modal") === "true");
+    } catch (error) {
+        test("Accessibility semantics", false, error.message);
+    }
+
     const passed = results.filter(item => item.pass).length;
     const failed = results.length - passed;
 
