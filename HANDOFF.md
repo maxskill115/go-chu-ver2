@@ -52,7 +52,7 @@
 ## 4. Hệ thống chính
 
 ### Smart Review
-- `promptStats`: Easy / Listen / Memory בלבד.
+- `promptStats`: chỉ Easy / Listen / Memory.
 - Weakness: `wrong * 2 - correct`.
 - Hard/Free không tham gia adaptive Easy.
 
