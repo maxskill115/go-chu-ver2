@@ -238,6 +238,134 @@ function shuffleEasyWords(){
     return shuffled;
 }
 
+/* ===== VER2 - HIỂN THỊ KÝ TỰ GÕ SAI ===== */
+function getTypingDiffChars(text){
+    return Array.from(
+        normalizeParagraph(String(text || "")).normalize("NFC")
+    );
+}
+
+function typingCharsMatch(expectedChar, actualChar){
+    if(expectedChar === undefined || actualChar === undefined) return false;
+    if(isCaseSensitive) return expectedChar === actualChar;
+    return expectedChar.toLocaleLowerCase("vi-VN") === actualChar.toLocaleLowerCase("vi-VN");
+}
+
+/*
+ * Căn chỉnh hai chuỗi bằng khoảng cách Levenshtein để một ký tự bị thiếu/thừa
+ * không làm toàn bộ phần phía sau bị báo sai theo.
+ */
+function buildTypingDiffAlignment(expectedText, typedText){
+    const expected = getTypingDiffChars(expectedText);
+    const typed = getTypingDiffChars(typedText);
+    const rows = expected.length + 1;
+    const cols = typed.length + 1;
+    const dp = Array.from({ length: rows }, () => Array(cols).fill(0));
+
+    for(let i = 0; i < rows; i++) dp[i][0] = i;
+    for(let j = 0; j < cols; j++) dp[0][j] = j;
+
+    for(let i = 1; i < rows; i++){
+        for(let j = 1; j < cols; j++){
+            const replaceCost = typingCharsMatch(expected[i - 1], typed[j - 1]) ? 0 : 1;
+            dp[i][j] = Math.min(
+                dp[i - 1][j] + 1,
+                dp[i][j - 1] + 1,
+                dp[i - 1][j - 1] + replaceCost
+            );
+        }
+    }
+
+    const alignment = [];
+    let i = expected.length;
+    let j = typed.length;
+
+    while(i > 0 || j > 0){
+        if(
+            i > 0 && j > 0 &&
+            typingCharsMatch(expected[i - 1], typed[j - 1]) &&
+            dp[i][j] === dp[i - 1][j - 1]
+        ){
+            alignment.push({ expected: expected[i - 1], typed: typed[j - 1], wrong: false });
+            i--;
+            j--;
+            continue;
+        }
+
+        if(i > 0 && j > 0 && dp[i][j] === dp[i - 1][j - 1] + 1){
+            alignment.push({ expected: expected[i - 1], typed: typed[j - 1], wrong: true });
+            i--;
+            j--;
+            continue;
+        }
+
+        if(i > 0 && dp[i][j] === dp[i - 1][j] + 1){
+            alignment.push({ expected: expected[i - 1], typed: undefined, wrong: true });
+            i--;
+            continue;
+        }
+
+        alignment.push({ expected: undefined, typed: typed[j - 1], wrong: true });
+        j--;
+    }
+
+    return alignment.reverse();
+}
+
+function createDiffChar(char, isWrong){
+    const span = document.createElement("span");
+    span.className = "typing-diff-char" + (isWrong ? " wrong" : "");
+
+    if(char === undefined){
+        span.classList.add("missing");
+        span.textContent = "□";
+    }else if(char === " "){
+        span.textContent = isWrong ? "␠" : "\u00A0";
+    }else{
+        span.textContent = char;
+    }
+
+    return span;
+}
+
+function createTypingDiffLine(label, alignment, key){
+    const line = document.createElement("div");
+    line.className = "typing-diff-line";
+
+    const labelEl = document.createElement("div");
+    labelEl.className = "typing-diff-label";
+    labelEl.textContent = label;
+
+    const valueEl = document.createElement("div");
+    valueEl.className = "typing-diff-value";
+
+    alignment.forEach(item => {
+        valueEl.appendChild(createDiffChar(item[key], item.wrong));
+    });
+
+    line.append(labelEl, valueEl);
+    return line;
+}
+
+function showTypingDiff(expectedText, typedText){
+    const alignment = buildTypingDiffAlignment(expectedText, typedText);
+
+    result.innerHTML = "";
+    result.classList.add("has-diff");
+
+    const wrap = document.createElement("div");
+    wrap.className = "typing-diff";
+
+    const title = document.createElement("div");
+    title.className = "typing-diff-title";
+    title.textContent = "❌ Chưa đúng — xem chữ màu đỏ";
+
+    wrap.appendChild(title);
+    wrap.appendChild(createTypingDiffLine("Cần gõ", alignment, "expected"));
+    wrap.appendChild(createTypingDiffLine("Bé gõ", alignment, "typed"));
+    result.appendChild(wrap);
+}
+
 /* show */
 function showText(){
     currentPrompt = texts[index];
@@ -259,13 +387,6 @@ function toggleModeExpand(){
     if(modeRow) modeRow.classList.toggle("collapsed");
 }
 
-// Nút mode gọi hàm này khi bấm vào vùng chữ/icon (PC: cả nút; Mobile: vùng trái).
-// - Nếu đang bấm đúng mode hiện tại -> KHÔNG gọi setMode, chỉ random/chuyển sang chữ tiếp theo.
-// - Nếu bấm mode khác -> gọi setMode(mode) để chuyển mode như bình thường.
-// Nút mode gọi hàm này khi bấm vào vùng chữ/icon (PC: cả nút; Mobile: vùng trái).
-// - Nếu đang THU GỌN và bấm đúng mode hiện tại -> không đổi mode, chỉ chuyển sang chữ tiếp theo.
-// - Nếu đang MỞ RỘNG (dropdown đang hiện) và bấm đúng mode hiện tại -> chỉ đóng dropdown lại, không đổi chữ.
-// - Nếu bấm mode khác -> gọi setMode(mode) để chuyển mode như bình thường (hàm này tự đóng dropdown).
 function handleModeClick(mode){
     const modeRow = document.querySelector(".mode-row");
     const isCollapsed = !modeRow || modeRow.classList.contains("collapsed");
@@ -281,9 +402,8 @@ function handleModeClick(mode){
     setMode(mode);
 }
 
-// Giống nút "Tiếp theo": chỉ cập nhật chữ/đoạn cần luyện gõ tiếp theo, không đổi mode.
 function nextPromptForCurrentMode(){
-    if(currentMode === "free") return; // chế độ Tự do có luồng nộp bài/tiếp theo riêng
+    if(currentMode === "free") return;
     index++;
     if(index >= texts.length){
         if(currentMode === "easy") texts = shuffleEasyWords();
@@ -324,17 +444,14 @@ function setMode(mode){
     showText();
 }
 
-/* typing effect */
 input.addEventListener("input", ()=>{
     input.classList.add("typing");
-
     clearTimeout(input._t);
     input._t = setTimeout(()=>{
         input.classList.remove("typing");
     },300);
 });
 
-/* check */
 function checkNext(){
     if(currentMode === "free") return;
 
@@ -353,15 +470,13 @@ function checkNext(){
         clearTimeout(resultTimer);
         result.className = "incorrect";
         result.style.opacity = "1";
-        result.innerText = "❌ Chưa đúng!";
+        showTypingDiff(currentPrompt, input.value);
     }
 }
 
-/* enter = next */
 input.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.isComposing && currentMode !== "free") {
         e.preventDefault();
         checkNext();
     }
 });
-

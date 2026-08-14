@@ -216,7 +216,6 @@
     box-shadow: 0 10px 24px rgba(8, 18, 32, 0.38), inset 0 0 0 1px rgba(255, 255, 255, 0.22);
 }
 
-/* input */
 .typing-input {
     width: 100%;
     box-sizing: border-box;
@@ -229,13 +228,11 @@
     outline: none;
 }
 
-/* focus */
 .typing-input:focus {
     border-color: var(--primary-color);
     box-shadow: 0 0 10px rgba(136,204,255,0.4);
 }
 
-/* typing effect */
 .typing-input.typing {
     border-image: linear-gradient(90deg,#38bdf8,#818cf8,#c084fc) 1;
     box-shadow: 0 0 8px rgba(129,140,248,0.5);
@@ -245,7 +242,6 @@
     color: #94a3b8;
 }
 
-/* result */
 #result {
     margin-top: 18px;
     min-height: 56px;
@@ -264,6 +260,79 @@
     background-color: var(--secondary-color);
     color: #000000;
     box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.5);
+}
+
+/* ===== VER2 - CHỈ RÕ KÝ TỰ GÕ SAI ===== */
+#result.incorrect.has-diff {
+    width: min(100%, 680px);
+    text-align: left;
+    background: #fff4b8;
+}
+
+.typing-diff {
+    display: grid;
+    gap: 10px;
+}
+
+.typing-diff-title {
+    text-align: center;
+    font-size: clamp(18px, 3vw, 24px);
+    font-weight: 900;
+    color: #541b1b;
+}
+
+.typing-diff-line {
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+}
+
+.typing-diff-label {
+    padding-top: 4px;
+    font-size: 15px;
+    font-weight: 900;
+    color: #4b5563;
+}
+
+.typing-diff-value {
+    min-width: 0;
+    font-size: clamp(22px, 4vw, 30px);
+    font-weight: 900;
+    line-height: 1.55;
+    color: #111827;
+    overflow-wrap: anywhere;
+}
+
+.typing-diff-char {
+    border-radius: 4px;
+}
+
+.typing-diff-char.wrong {
+    display: inline-block;
+    min-width: 0.8em;
+    padding: 0 3px;
+    margin: 0 1px;
+    background: #ff4d6d;
+    color: #ffffff;
+    text-align: center;
+    box-shadow: 0 0 0 1px rgba(120, 0, 20, 0.2);
+}
+
+.typing-diff-char.missing {
+    background: #b91c1c;
+    color: #ffffff;
+}
+
+@media (max-width: 600px) {
+    .typing-diff-line {
+        grid-template-columns: 1fr;
+        gap: 2px;
+    }
+
+    .typing-diff-label {
+        padding-top: 0;
+    }
 }
 
 #result.correct {
@@ -345,14 +414,10 @@
         padding: 12px;
     }
 
-    /* Thu gọn: khi đã chọn 1 chế độ, ẩn 2 nút còn lại để đỡ chiếm chỗ */
     .mode-row.collapsed .mode-btn:not(.active) {
         display: none;
     }
 
-    /* Tách nút đang chọn thành 2 vùng bấm nằm cạnh nhau (không chồng lên nhau):
-       - vùng chữ (mode-btn-label): bấm vào đổi ngay sang chế độ khác (xử lý trong setMode)
-       - vùng mũi tên (mode-arrow-hit): bấm vào mới mở danh sách để chọn chế độ cụ thể */
     .mode-row.collapsed .mode-btn.active {
         display: flex;
         align-items: stretch;
@@ -496,8 +561,6 @@
     }
 }
 
-/* Trên PC: panel cài đặt là hộp nhỏ nổi ở góc trên bên phải, gần nút bánh răng,
-   không chiếm hết chiều ngang của thanh study-hud. */
 @media (min-width: 769px) {
     .settings-panel {
         position: fixed;
