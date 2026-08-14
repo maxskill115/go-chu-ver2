@@ -2,6 +2,7 @@
 let listenModeActive = false;
 let vietnameseVoice = null;
 let listenSpeechTimer;
+let listenVoiceEventsBound = false;
 
 function speechSupported(){
     return "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
@@ -16,6 +17,18 @@ function refreshVietnameseVoice(){
     return vietnameseVoice;
 }
 
+function ensureListenVoiceRuntime(){
+    if(!speechSupported()) return null;
+    if(!listenVoiceEventsBound){
+        listenVoiceEventsBound = true;
+        window.speechSynthesis.addEventListener?.("voiceschanged", () => {
+            refreshVietnameseVoice();
+            if(listenModeActive) updateListenModeBar();
+        });
+    }
+    return refreshVietnameseVoice();
+}
+
 function getListenSpeechVolume(){
     const lowFactor = isLowVolume ? 0.45 : 1;
     return Math.max(0, Math.min(1, masterVolume * lowFactor));
@@ -26,7 +39,7 @@ function speakPrompt(text = currentPrompt){
 
     clearTimeout(listenSpeechTimer);
     window.speechSynthesis.cancel();
-    refreshVietnameseVoice();
+    ensureListenVoiceRuntime();
 
     listenSpeechTimer = setTimeout(() => {
         const utterance = new SpeechSynthesisUtterance(String(text));
@@ -89,7 +102,6 @@ function updateListenModeBar(){
     const supported = speechSupported();
     const isEasy = currentMode === "easy";
 
-    /* Listen là tính năng RIÊNG của Easy: ngoài Easy phải ẩn hẳn UI, không chỉ disable. */
     bar.classList.toggle("hidden-by-mode", !isEasy);
     bar.setAttribute("aria-hidden", isEasy ? "false" : "true");
     bar.classList.toggle("active", listenModeActive && isEasy);
@@ -112,6 +124,7 @@ function updateListenModeBar(){
 function setListenMode(active){
     if(active && currentMode !== "easy") setMode("easy");
 
+    if(active) ensureListenVoiceRuntime();
     listenModeActive = Boolean(active && currentMode === "easy" && speechSupported());
     clearTimeout(listenSpeechTimer);
 
@@ -119,7 +132,6 @@ function setListenMode(active){
         window.speechSynthesis.cancel();
     }
 
-    refreshVietnameseVoice();
     applyListenPromptVisibility();
     updateListenModeBar();
 
@@ -152,14 +164,7 @@ setMode = function(mode){
     updateListenModeBar();
 };
 
-if(speechSupported()){
-    refreshVietnameseVoice();
-    window.speechSynthesis.addEventListener?.("voiceschanged", () => {
-        refreshVietnameseVoice();
-        updateListenModeBar();
-    });
-}
-
+/* Không enumerate voice ở startup; chỉ tạo UI nhẹ. */
 ensureListenModeBar();
 applyListenPromptVisibility();
 updateListenModeBar();
