@@ -1,0 +1,93 @@
+/* ===== VER2 PHASE 4 - NGHE RỒI GÕ ===== */
+.listen-mode-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 8px 0 14px;
+    min-height: 42px;
+}
+
+.listen-mode-bar.active {
+    padding: 9px 10px;
+    border: 1px solid rgba(255, 215, 0, 0.5);
+    border-radius: 12px;
+    background: rgba(64, 50, 10, 0.32);
+}
+
+.listen-mode-btn {
+    min-height: 40px;
+    padding: 8px 14px;
+    border: 1px solid rgba(136, 204, 255, 0.7);
+    border-radius: 10px;
+    background: rgba(47, 91, 130, 0.88);
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.listen-mode-btn.primary {
+    border-color: rgba(255, 215, 0, 0.72);
+}
+
+.listen-mode-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.listen-mode-status {
+    color: #cfeaff;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+#text.listen-prompt-hidden {
+    position: relative;
+    color: transparent !important;
+    text-shadow: none !important;
+    user-select: none;
+}
+
+#text.listen-prompt-hidden::after {
+    content: "🔊 Hãy nghe rồi gõ";
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #d8efff;
+    font-size: clamp(22px, 4vw, 30px);
+    font-weight: 800;
+    letter-spacing: 0.2px;
+}
+
+@media (max-width: 768px) {
+    .listen-mode-bar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .listen-mode-status {
+        grid-column: 1 / -1;
+        text-align: center;
+    }
+
+    .listen-mode-btn {
+        width: 100%;
+        min-width: 0;
+        padding: 9px 8px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 420px) {
+    .listen-mode-bar {
+        grid-template-columns: 1fr;
+    }
+
+    .listen-mode-status {
+        grid-column: auto;
+    }
+}
