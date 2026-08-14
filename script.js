@@ -320,14 +320,30 @@ musicSelect.addEventListener("change", () => {
     playBackgroundTrack(Number(selectedBackgroundMode) || 0);
 });
 
-window.addEventListener("resize", () => {
-    if(currentMode === "free" && freeTarget){
+/* ===== STABILITY: gom resize/input dồn vào tối đa 1 lần mỗi frame ===== */
+let freeResizeFrame = 0;
+let freeTypingFrame = 0;
+
+function scheduleFreeLayoutSync(){
+    if(freeResizeFrame) return;
+    freeResizeFrame = requestAnimationFrame(() => {
+        freeResizeFrame = 0;
+        if(currentMode !== "free" || !freeTarget) return;
         applyFreeTextScale(freeTarget);
         syncFreeInputToDisplay();
-    }
-});
+    });
+}
 
-freeInput.addEventListener("input", updateFreeTypingState);
+function scheduleFreeTypingState(){
+    if(freeTypingFrame) return;
+    freeTypingFrame = requestAnimationFrame(() => {
+        freeTypingFrame = 0;
+        updateFreeTypingState();
+    });
+}
+
+window.addEventListener("resize", scheduleFreeLayoutSync, { passive: true });
+freeInput.addEventListener("input", scheduleFreeTypingState);
 
 freeInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
@@ -339,25 +355,10 @@ freeInput.addEventListener("keydown", (e) => {
 startStudyTimer();
 setMode("easy");
 
-/* ===== Tự động mở toàn màn hình khi có tương tác ===== */
-function requestAppFullscreen(){
-    if(document.fullscreenElement || document.webkitFullscreenElement) return;
-    const el = document.documentElement;
-    const request = el.requestFullscreen
-        || el.webkitRequestFullscreen
-        || el.mozRequestFullScreen
-        || el.msRequestFullscreen;
-    if(!request) return;
-    try {
-        const result = request.call(el);
-        if(result && typeof result.catch === "function"){
-            result.catch(() => {});
-        }
-    } catch (err) {
-        // Một số trình duyệt (vd Safari trên iOS) không hỗ trợ hoặc chặn yêu cầu này -> bỏ qua
-    }
-}
-
-["click", "keydown", "wheel"].forEach(evt => {
-    document.addEventListener(evt, requestAppFullscreen, { passive: true });
-});
+/*
+ * STABILITY:
+ * Trước đây trang tự gọi requestFullscreen trên mọi click/keydown/wheel.
+ * Khi browser từ chối hoặc người dùng gõ/cuộn liên tục, yêu cầu fullscreen bị lặp
+ * rất nhiều lần và có thể gây giật/đơ. Fullscreen tự động đã được bỏ hoàn toàn.
+ * Nếu sau này cần fullscreen, phải dùng một nút rõ ràng do người dùng chủ động bấm.
+ */
