@@ -8,6 +8,7 @@ Tài liệu này ghi **thứ tự nạp module và chuỗi wrapper runtime** đ�
 - Module mới không được ghi Hard/Free vào `promptStats` của Easy.
 - Nếu cần bọc `showText`, `setMode`, `checkNext`, `setListenMode`, `setMemoryMode`, phải lưu base function trước rồi gọi base đúng một lần.
 - Module cần hàm được khai báo trong `script.js` (ví dụ `submitFreeAnswer`, `setFreeTarget`) phải nạp **sau `script.js`**.
+- Module accessibility không được bọc logic học; chỉ quan sát DOM/trạng thái UI.
 - Debug/smoke-test nạp cuối cùng và không thay đổi hành vi học.
 
 ## Load order hiện tại
@@ -28,7 +29,8 @@ Tài liệu này ghi **thứ tự nạp module và chuỗi wrapper runtime** đ�
 14. `vietnamese-dashboard.js`
 15. `script.js`
 16. `mode-stats.js`
-17. `debug-smoke.js`
+17. `accessibility.js`
+18. `debug-smoke.js`
 
 ## Chuỗi chức năng chính
 
@@ -96,6 +98,20 @@ Invariant bắt buộc: **Listen và Memory không được active cùng lúc**.
 - Hard/Free không tham gia `getPromptWeakness`, Smart Review, topic Auto level hay adaptive Easy.
 - Dashboard tổng quan cộng Easy + Hard + Free; phần **Cần ôn** và **Lỗi dấu** vẫn là dữ liệu Easy.
 
+## Accessibility layer
+
+`accessibility.js` nạp sau các module UI chính và **không ghi đè hàm học**.
+
+Nó chỉ:
+
+- đồng bộ `aria-expanded`, `aria-hidden`, `aria-controls`;
+- gắn role/dialog semantics cho game selector;
+- tạo focus trap cho profile dashboard và game selector;
+- trả focus về nút mở khi dialog đóng;
+- đặt background `inert` khi modal đang mở;
+- bổ sung `aria-live` cho result/status;
+- hỗ trợ `prefers-reduced-motion` qua `accessibility.css`.
+
 ## Khi thêm module mới
 
 Trước khi merge:
@@ -106,4 +122,5 @@ Trước khi merge:
 4. Không tạo vòng `A -> B -> A`.
 5. Chạy `runGoChuSmokeTests()`.
 6. Test Easy / Hard / Free / Listen / Memory / chuyển profile.
-7. Cập nhật tài liệu này và `HANDOFF.md` nếu chuỗi wrapper thay đổi.
+7. Test keyboard-only: Tab/Shift+Tab/Escape ở dashboard + game selector.
+8. Cập nhật tài liệu này và `HANDOFF.md` nếu chuỗi wrapper thay đổi.
