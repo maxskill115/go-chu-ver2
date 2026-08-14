@@ -1,4 +1,4 @@
-/* ===== VER2 PHASE 9 - DEBUG SMOKE TESTS =====
+/* ===== VER2 PHASE 9+10 - DEBUG SMOKE TESTS =====
  * Không tự chạy trong sử dụng bình thường.
  * Chạy bằng:
  *   - URL thêm ?debug=1
@@ -151,6 +151,30 @@ function runGoChuSmokeTests(){
         test("Twemoji rules đều có fallback", Array.isArray(promptVisualRules) && promptVisualRules.length > 0 && promptVisualRules.every(rule => Boolean(rule.code && rule.fallback)));
     } catch (error) {
         test("Asset reliability", false, error.message);
+    }
+
+    try {
+        test("TTS health API tồn tại", typeof getGoChuTtsHealth === "function");
+        test("TTS manifest tồn tại", Boolean(window.GO_CHU_TTS_MANIFEST && typeof window.GO_CHU_TTS_MANIFEST === "object"));
+        test("TTS meta tồn tại", Boolean(window.GO_CHU_TTS_META && typeof window.GO_CHU_TTS_META === "object"));
+        test("TTS local helper tồn tại", typeof getLocalTtsPath === "function" && typeof hasLocalTts === "function");
+
+        const manifest = window.GO_CHU_TTS_MANIFEST || {};
+        const meta = window.GO_CHU_TTS_META || {};
+        const entries = Object.entries(manifest);
+        const easySet = new Set(easyWords);
+        const ttsHealth = getGoChuTtsHealth();
+
+        test("TTS manifest count khớp meta", entries.length === Number(meta.count || 0), `${entries.length}/${Number(meta.count || 0)}`);
+        test("TTS manifest key thuộc easyWords", entries.every(([prompt]) => easySet.has(prompt)), `${entries.length} entry`);
+        test(
+            "TTS manifest path hợp lệ",
+            entries.every(([, path]) => typeof path === "string" && path.startsWith("Audio/tts/") && path.endsWith(".mp3"))
+        );
+        test("TTS health count khớp manifest", Number(ttsHealth.manifestCount || 0) === entries.length, `${ttsHealth.manifestCount}/${entries.length}`);
+        test("TTS provider đúng", meta.provider === "google-cloud-text-to-speech", String(meta.provider || ""));
+    } catch (error) {
+        test("Google TTS local", false, error.message);
     }
 
     const passed = results.filter(item => item.pass).length;
