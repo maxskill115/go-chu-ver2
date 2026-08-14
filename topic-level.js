@@ -38,6 +38,14 @@ function getLevelPool(topicId, wordCount){
     return getTopicPool(topicId).filter(prompt => getPromptWordCount(prompt) === wordCount);
 }
 
+function normalizeSavedLevelForTopic(){
+    if(selectedLevelMode === "auto") return;
+    const lockedLevel = Number(selectedLevelMode);
+    if(getLevelPool(selectedTopicId, lockedLevel).length) return;
+    selectedLevelMode = "auto";
+    saveTopicLevelSetting(GO_CHU_LEVEL_KEY, selectedLevelMode);
+}
+
 function getTopicLearningSummary(){
     const pool = getTopicPool();
     let correct = 0;
@@ -74,7 +82,11 @@ function resolveAvailableAutoLevel(target){
 }
 
 function getEffectiveLearningLevel(){
-    if(selectedLevelMode !== "auto") return Number(selectedLevelMode);
+    if(selectedLevelMode !== "auto"){
+        const lockedLevel = Number(selectedLevelMode);
+        if(getLevelPool(selectedTopicId, lockedLevel).length) return lockedLevel;
+        return resolveAvailableAutoLevel(lockedLevel);
+    }
     return resolveAvailableAutoLevel(calculateAutoTargetLevel());
 }
 
@@ -179,6 +191,8 @@ function ensureTopicLevelBar(){
     topicSelect.addEventListener("change", () => {
         selectedTopicId = topicSelect.value;
         saveTopicLevelSetting(GO_CHU_TOPIC_KEY, selectedTopicId);
+        normalizeSavedLevelForTopic();
+        document.getElementById("levelSelect").value = selectedLevelMode;
         if(typeof smartReviewActive !== "undefined") smartReviewActive = false;
         rebuildTopicLearningRound();
         updateTopicLevelBar();
@@ -296,5 +310,6 @@ setMode = function(mode){
     updateTopicLevelBar();
 };
 
+normalizeSavedLevelForTopic();
 ensureTopicLevelBar();
 updateTopicLevelBar();
