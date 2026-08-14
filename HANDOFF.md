@@ -39,6 +39,7 @@ Web HTML/CSS/JS thuần cho bé luyện **đọc → gõ → sửa lỗi → ôn
 - [x] Đợt 7 — deploy QA prep + readiness report.
 - [x] Đợt 8 — UI scope + visual accuracy + regression guards.
 - [x] Đợt 9 — visual mapping round 2.
+- [~] **Đợt 10 — freeze/stability audit + runtime diagnostics.**
 - [ ] Vendor/commit SVG Twemoji thật nếu muốn offline visual 100%.
 - [ ] Deploy QA thực tế sau khi binary hoàn tất.
 
@@ -62,8 +63,7 @@ Web HTML/CSS/JS thuần cho bé luyện **đọc → gõ → sửa lỗi → ôn
 - Hotfix UX/voice: PR #5 → `26cdb63`
 - Phase 5: PR #6 → `daecd42`
 - Phase 6: PR #7 → `18552e0`
-- Phase 7: PR #8 → `e281c40`
-- Phase 8: PR #9 → `10d756e`
+- Phase 7: PR #8 → `10d756e`
 - Phase 9 đợt 1: PR #10 → `36d16dc`
 - Phase 9 đợt 2: PR #12 → `7d598f2`
 - Phase 9 đợt 3: PR #13 → `94bb3ef`
@@ -76,6 +76,7 @@ Web HTML/CSS/JS thuần cho bé luyện **đọc → gõ → sửa lỗi → ôn
 - Phase 9 đợt 8: PR #22 → `14d04bd`
 - Handoff đợt 8: PR #23 → `6b73ff8`
 - Phase 9 đợt 9 visual round 2: PR #24 → `ed76406`
+- Phase 9 đợt 10 freeze/stability: branch `agent/freeze-stability-fix`, PR/commit cập nhật sau merge.
 
 Tooling scaffolding trước đợt 6:
 
@@ -140,36 +141,119 @@ Nếu không chắc → **ẩn hình**, không ép hình gần nghĩa.
 
 ### PR #24 → `ed76406`
 
-Mở rộng visual đúng nghĩa cho:
-
-- sư tử
-- hổ
-- gấu
-- sói
-- cáo
-- nai/hươu
-- rùa
-- rắn
-- ếch
-- cua
-- tôm
-- cá mập
-- cá heo
-- chim cánh cụt
-- đại bàng
-- cú
-- ong
-- bướm
-
-Đồng thời:
-
-- `ong tìm mật hoa` → ong, không còn hoa.
-- `bướm bay quanh hoa` → bướm, không còn hoa.
-- vẫn giữ exact/contains whitelist, không generic keyword.
+Mở rộng visual đúng nghĩa cho sư tử, hổ, gấu, sói, cáo, nai/hươu, rùa, rắn, ếch, cua, tôm, cá mập, cá heo, chim cánh cụt, đại bàng, cú, ong, bướm.
 
 ---
 
-## 6. CI / regression guard
+## 6. Freeze / stability audit — Phase 9 đợt 10
+
+Branch:
+
+```text
+agent/freeze-stability-fix
+```
+
+### Nguyên nhân nghiêm trọng đã tìm thấy
+
+`script.js` cũ tự gọi fullscreen trên:
+
+```text
+click
+keydown
+wheel
+```
+
+Điều này có nghĩa mỗi lần bé gõ phím hoặc cuộn chuột, browser có thể nhận thêm yêu cầu `requestFullscreen()`. Nếu browser từ chối hoặc fullscreen bị thoát, yêu cầu có thể lặp liên tục và gây giật/đơ.
+
+### Fix đã thực hiện
+
+#### 1. Bỏ auto-fullscreen hoàn toàn
+
+- Xóa `requestAppFullscreen()` khỏi runtime.
+- Xóa listener toàn cục `click/keydown/wheel` dùng fullscreen.
+- Nếu sau này cần fullscreen phải thêm nút riêng do người dùng chủ động bấm.
+
+#### 2. Throttle Free resize/input
+
+`script.js`:
+
+- resize Free mode đi qua `scheduleFreeLayoutSync()`.
+- input Free đi qua `scheduleFreeTypingState()`.
+- dùng `requestAnimationFrame` để tối đa 1 update/frame, tránh mobile keyboard/resize bắn dồn event.
+
+#### 3. Giảm DOM + request ảnh ở dropdown Tự do
+
+File mới:
+
+```text
+stability-fixes.js
+```
+
+Trước đây mỗi lần mở danh sách bài:
+
+- xóa menu cũ;
+- tạo lại khoảng 58 button;
+- mỗi option mang một `../IMG/gochu_tudo (...).png`.
+
+Fix:
+
+- render menu một lần;
+- dùng `DocumentFragment`;
+- option danh sách dùng emoji nhẹ `📖 / ✍️`;
+- chỉ item đang chọn bên ngoài menu giữ ảnh thật;
+- tránh hàng chục request ảnh mỗi lần mở dropdown.
+
+#### 4. Cleanup khi pagehide
+
+`stability-fixes.js` dọn các timeout/audio transient khi trang rời vòng đời.
+
+#### 5. Performance diagnostics
+
+File mới:
+
+```text
+performance-health.js
+```
+
+Theo dõi:
+
+- Long Tasks API nếu browser hỗ trợ;
+- số long task;
+- tổng/max/average duration;
+- runtime `error`;
+- `unhandledrejection`;
+- giữ tối đa 20 record gần nhất.
+
+Debug:
+
+```js
+getGoChuPerformanceHealth()
+printGoChuPerformanceHealth()
+```
+
+#### 6. Regression guard
+
+`tools/verify_repository.py` fail nếu:
+
+- auto-fullscreen quay lại `script.js`;
+- listener nặng trên `wheel/keydown` quay lại;
+- Free resize/input mất rAF throttle;
+- Free dropdown mất single-render guard;
+- dropdown lại gắn ảnh nặng cho mọi option;
+- performance diagnostics bị xóa.
+
+### Invariant stability mới
+
+```text
+Không tự request fullscreen từ global interaction.
+Không rebuild danh sách 50+ DOM item mỗi lần mở menu.
+Không chạy layout-heavy resize/input nhiều lần trong cùng frame.
+Nếu còn treo phải có performance/error diagnostics để lần ra nguyên nhân.
+```
+
+---
+
+## 7. CI / regression guard
 
 `.github/workflows/verify.yml` hiện chạy:
 
@@ -182,17 +266,9 @@ Mở rộng visual đúng nghĩa cho:
 
 CI đã PASS các PR #19, #20, #22, #24.
 
-`tools/verify_repository.py` khóa thêm:
-
-- `ui-scope-fixes.css` phải được import.
-- `.hidden-by-mode` phải có `display:none !important`.
-- Listen/TTS/SmartReview/Visual phải có Easy-only guard.
-- `visual-data.js` không được quay lại `keywords:` rộng.
-- visual mapping phải có `exact` + `contains`.
-
 ---
 
-## 7. Listen / Google TTS
+## 8. Listen / Google TTS
 
 Runtime **Easy-only**:
 
@@ -210,22 +286,11 @@ speaking rate 0.82
 MP3
 ```
 
-Files:
-
-```text
-tts-manifest.js
-tts-local.js
-TTS_RENDERING.md
-tools/render_google_tts.py
-tools/setup_google_tts.bat
-tools/render_google_tts.bat
-```
-
 MP3 thật chưa render/commit vì chờ Google Cloud account của người dùng.
 
 ---
 
-## 8. Visual pipeline
+## 9. Visual pipeline
 
 Twemoji pinned `jdecked/twemoji@17.0.3`.
 
@@ -246,7 +311,7 @@ getGoChuVisualHealth()
 
 ---
 
-## 9. QA / deploy
+## 10. QA / deploy
 
 Local server:
 
@@ -260,13 +325,6 @@ Debug:
 http://127.0.0.1:8000/?debug=1
 ```
 
-Readiness:
-
-```bat
-py tools\check_deploy_ready.py
-py tools\check_deploy_ready.py --strict
-```
-
 Runtime debug:
 
 ```js
@@ -275,22 +333,22 @@ getGoChuTtsHealth()
 getGoChuVisualHealth()
 getGoChuAssetHealth()
 getGoChuStorageHealth()
+getGoChuPerformanceHealth()
+printGoChuPerformanceHealth()
 ```
 
 ---
 
-## 10. Việc assistant tiếp tục
+## 11. Việc assistant tiếp tục
 
-1. Audit thêm desktop/mobile CSS thực tế.
-2. Rà ARIA/state khi đổi Easy ↔ Hard ↔ Free.
-3. Rà wrapper chain cho state bị giữ lại sau đổi mode.
-4. Rà visual whitelist còn cụm mơ hồ/thiếu mapping.
-5. Rà branch/file thừa.
-6. Chuẩn bị release checklist cuối.
+1. Chạy CI Phase 9 đợt 10 và merge nếu PASS.
+2. Nếu user vẫn thấy treo, lấy `printGoChuPerformanceHealth()` sau phiên sử dụng để xác định long task/error.
+3. Audit tiếp background audio lifecycle và wrapper chain nếu diagnostics còn báo long task.
+4. Rà desktop/mobile CSS và branch/file thừa.
 
 ---
 
-## 11. Việc chờ người dùng
+## 12. Việc chờ người dùng
 
 ### Google TTS
 
@@ -312,7 +370,7 @@ tools\vendor_twemoji.bat
 
 ---
 
-## 12. Release gate cuối
+## 13. Release gate cuối
 
 1. `python tools/verify_repository.py` PASS.
 2. `python tools/check_deploy_ready.py --strict` PASS.
