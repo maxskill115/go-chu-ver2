@@ -63,7 +63,8 @@ def check_styles() -> None:
     if '@import url("ui-scope-fixes.css");' not in styles:
         fail("styles.css chưa import ui-scope-fixes.css")
     scope = read("ui-scope-fixes.css")
-    if ".hidden-by-mode" not in scope or "display:none !important" not in scope.replace(" ", ""):
+    compact = re.sub(r"\s+", "", scope)
+    if ".hidden-by-mode" not in scope or "display:none!important" not in compact:
         fail("UI scope guard cho hidden-by-mode chưa đủ mạnh")
     ok("UI scope stylesheet đã được nạp cuối cascade")
 
