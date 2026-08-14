@@ -53,9 +53,9 @@ Ghi chú repo:
 - [x] Thiết lập quy tắc cập nhật `HANDOFF.md` cho mọi công việc.
 
 ### Phase 1 — Phản hồi lỗi khi gõ
-- [ ] Chỉ rõ ký tự bé gõ sai/thừa/thiếu.
-- [ ] Không làm phần phía sau bị đánh dấu sai hàng loạt khi thiếu một ký tự ở giữa.
-- [ ] Hiển thị tốt trên mobile.
+- [x] Chỉ rõ ký tự bé gõ sai/thừa/thiếu.
+- [x] Không làm phần phía sau bị đánh dấu sai hàng loạt khi thiếu một ký tự ở giữa.
+- [x] Hiển thị responsive trên mobile.
 
 ### Phase 2 — Random thông minh + ôn lỗi
 - [ ] Ghi lại từ/câu bé thường gõ sai.
@@ -131,12 +131,24 @@ Không triển khai nhiều feature cùng lúc. Hoàn tất, kiểm tra và ghi 
 - Baseline code đã được đưa lên `main`: `index.html`, dữ liệu Đơn giản/Nâng cao/Tự do, logic JS và CSS responsive.
 - Đã kiểm tra cú pháp các file JavaScript sau khi tách bằng `node --check`: đạt.
 - Audio binary vẫn là việc tồn đọng đã ghi ở phần Ghi chú repo.
-- Feature tiếp theo ngay sau baseline: **Phase 1 — chỉ rõ ký tự gõ sai**.
+- Phase 1 đã hoàn tất: **chỉ rõ ký tự gõ sai/thừa/thiếu**.
+
+### 2026-08-14 — Phase 1: Chỉ rõ ký tự gõ sai
+
+- Thay thông báo chung `❌ Chưa đúng!` bằng phần so sánh trực quan giữa **Cần gõ** và **Bé gõ**.
+- Ký tự sai, thừa hoặc thiếu được tô đỏ.
+- Ký tự thiếu hiển thị bằng ô `□`; khoảng trắng sai hiển thị ký hiệu `␠`.
+- Dùng căn chỉnh Levenshtein để một ký tự thiếu/thừa ở giữa không làm toàn bộ phần phía sau bị đánh dấu sai.
+- Tôn trọng cài đặt phân biệt hoa/thường hiện có.
+- CSS có layout riêng cho desktop và tự chuyển thành một cột trên màn hình nhỏ.
+- Đã chạy `node --check` cho `script-core.js` và `script.js`: đạt.
+- Phạm vi thay đổi: `script-core.js`, `styles-2.css`, `HANDOFF.md`.
 
 ## 7. Việc tiếp theo
 
-1. Áp dụng Phase 1 — chỉ rõ ký tự gõ sai/thừa/thiếu.
-2. Cập nhật Nhật ký + trạng thái Phase 1 trong `HANDOFF.md` trong cùng đợt thay đổi.
-3. Kiểm tra cú pháp JavaScript và giao diện responsive.
-4. Sau khi Phase 1 ổn định mới bắt đầu Phase 2.
-5. Bổ sung lại audio binary vào remote khi có luồng upload binary phù hợp.
+1. Bắt đầu **Phase 2 — Random thông minh + ôn lỗi**.
+2. Thiết kế cấu trúc lưu số lần đúng/sai theo từng prompt bằng `localStorage`.
+3. Ưu tiên đưa lại prompt hay sai nhưng không lặp ngay liên tiếp.
+4. Tạo mục/luồng “Ôn lại từ hay sai” sau khi đã có dữ liệu lỗi ổn định.
+5. Mọi thay đổi của Phase 2 tiếp tục cập nhật vào `HANDOFF.md` trong cùng đợt code.
+6. Audio binary remote vẫn là việc tồn đọng riêng, không chặn phát triển tính năng học.
