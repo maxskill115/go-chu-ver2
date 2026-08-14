@@ -9,6 +9,7 @@ Tài liệu này ghi **thứ tự nạp module và chuỗi wrapper runtime** đ�
 - Nếu cần bọc `showText`, `setMode`, `checkNext`, `setListenMode`, `setMemoryMode`, phải lưu base function trước rồi gọi base đúng một lần.
 - Module cần hàm được khai báo trong `script.js` (ví dụ `submitFreeAnswer`, `setFreeTarget`) phải nạp **sau `script.js`**.
 - Module storage chỉ được thay cách persistence tương đương, không đổi schema/cadence học.
+- Module asset không thay asset gốc; chỉ probe/fallback khi asset lỗi.
 - Module accessibility không được bọc logic học; chỉ quan sát DOM/trạng thái UI.
 - Debug/smoke-test nạp cuối cùng và không thay đổi hành vi học.
 
@@ -31,8 +32,9 @@ Tài liệu này ghi **thứ tự nạp module và chuỗi wrapper runtime** đ�
 15. `script.js`
 16. `mode-stats.js`
 17. `storage-health.js`
-18. `accessibility.js`
-19. `debug-smoke.js`
+18. `asset-reliability.js`
+19. `accessibility.js`
+20. `debug-smoke.js`
 
 ## Chuỗi chức năng chính
 
@@ -103,29 +105,50 @@ Invariant bắt buộc: **Listen và Memory không được active cùng lúc**.
 
 ## Storage health layer
 
-`storage-health.js` chỉ thay implementation persistence của:
-
-- `saveProfileData(profileId, data)`;
-- `saveProfilesRegistry()`.
-
-Behavior dữ liệu giữ nguyên, nhưng trước `localStorage.setItem` sẽ so sánh serialized value hiện có:
-
-- giống hệt → skip write;
-- khác → write bình thường.
+`storage-health.js` chỉ thay implementation persistence của `saveProfileData` và `saveProfilesRegistry` bằng compare-before-write.
 
 Quy tắc an toàn:
 
-- vẫn gọi final `normalizeProfileData`, nên `promptStats`, `modeStats`, study và preferences không mất field;
-- không cache quyết định write trong memory — luôn đọc current `localStorage` trước khi skip, nên import/reset/remove key không bị stale cache;
+- vẫn gọi final `normalizeProfileData`;
+- luôn đọc current `localStorage` trước khi skip, không dùng stale memory cache;
 - không thay cadence study timer 15 giây;
 - không debounce prompt result save;
 - không đổi key/schema/version.
 
-Debug helpers:
+Debug:
 
-- `getGoChuStorageHealth()` — trả số key, profile, dung lượng UTF-8 ước tính và top key lớn nhất;
-- `printGoChuStorageHealth()` — in report ra Console;
-- `goChuStorageMetrics` — đếm writes/skips/errors kể từ khi module load.
+- `getGoChuStorageHealth()`;
+- `printGoChuStorageHealth()`;
+- `goChuStorageMetrics`.
+
+## Asset reliability layer
+
+`asset-reliability.js` **không bọc logic học** và không thay đường dẫn asset gốc.
+
+Nó chỉ probe các UI asset `../IMG/...` đang quan trọng/đang hiển thị:
+
+- title icon;
+- 3 mode icons;
+- Free action icon;
+- icon bài Tự do đang hiển thị ở selector/practice.
+
+Behavior:
+
+- tải được → giữ background image gốc;
+- lỗi → `.go-chu-asset-missing` + fallback emoji/text từ `asset-reliability.css`;
+- cache probe theo URL để tránh request trùng;
+- với Free poem icon, MutationObserver theo dõi URL thay đổi;
+- async probe có token để response URL cũ không ghi đè state URL mới;
+- không probe toàn bộ 57 thumbnail bài Free cùng lúc.
+
+Twemoji Phase 3 không đi qua module này vì `visual-prompt.js` đã có `img.onerror` → emoji fallback.
+
+Debug:
+
+- `getGoChuAssetHealth()`;
+- `printGoChuAssetHealth()`.
+
+Inventory chi tiết: `ASSET_INVENTORY.md`.
 
 ## Accessibility layer
 
@@ -153,4 +176,5 @@ Trước khi merge:
 6. Test Easy / Hard / Free / Listen / Memory / chuyển profile.
 7. Test keyboard-only: Tab/Shift+Tab/Escape ở dashboard + game selector.
 8. Với storage: test export/import/reset profile và no-op write skip.
-9. Cập nhật tài liệu này và `HANDOFF.md` nếu chuỗi wrapper thay đổi.
+9. Với asset: test cả khi `../IMG` có và không có; fallback không được làm đổi layout lớn.
+10. Cập nhật tài liệu này và `HANDOFF.md` nếu chuỗi/load order thay đổi.

@@ -127,17 +127,29 @@ Checklist này dùng sau mỗi phase lớn hoặc trước khi deploy bản mớ
 ## 13. Storage / backup
 
 - [ ] `getGoChuStorageHealth()` chạy không lỗi và trả `totalKB`, `largestKeys`, metrics.
-- [ ] Gọi `saveProfileData(activeProfileId, activeProfileData)` hai lần liên tiếp → lần sau được tính vào `profileWriteSkips`.
-- [ ] Gọi `saveProfilesRegistry()` khi registry không đổi → tăng `registryWriteSkips`.
+- [ ] Hai `saveProfileData` giống nhau liên tiếp → lần sau tăng `profileWriteSkips`.
+- [ ] `saveProfilesRegistry()` khi registry không đổi → tăng `registryWriteSkips`.
 - [ ] Gõ đúng/sai vẫn ghi stats ngay, không bị dedupe nhầm.
-- [ ] Study time vẫn flush khoảng 15 giây như trước; không đổi cadence.
-- [ ] Đổi topic/level/Memory rồi reload → preferences còn đúng.
-- [ ] Chuyển hồ sơ rồi reload → active profile đúng.
-- [ ] Reset hồ sơ xong dữ liệu thực sự rỗng, không bị stale cache phục hồi lại.
+- [ ] Study time vẫn flush khoảng 15 giây như trước.
+- [ ] Reset/import không bị stale cache phục hồi dữ liệu cũ.
 - [ ] Export → reset/import → `promptStats`, `modeStats`, study và preferences phục hồi đủ.
 - [ ] `goChuStorageMetrics.writeErrors` giữ 0 trong sử dụng bình thường.
 
-## 14. Mobile
+## 14. Asset reliability / offline fallback
+
+- [ ] Khi `../IMG` tồn tại: title/mode/free icons giữ nguyên ảnh gốc, không hiện emoji đè lên.
+- [ ] Khi `../IMG` không tồn tại: title fallback `⌨️`, Easy `🔤`, Hard `🧠`, Free `✍️`.
+- [ ] Nút dùng đoạn tự nhập fallback `✍️` nếu icon gốc thiếu.
+- [ ] Icon bài Tự do đang chọn fallback `📖` khi `gochu_tudo (...).png` thiếu.
+- [ ] Đổi bài Tự do nhiều lần không để response asset cũ ghi đè icon mới.
+- [ ] Không tạo hàng chục request cho toàn bộ 57 thumbnail khi chỉ mở trang.
+- [ ] `getGoChuAssetHealth()` trả `ok + missing + pending = total`.
+- [ ] Mọi UI probe có fallback không rỗng.
+- [ ] Twemoji CDN mất mạng → visual prompt chuyển emoji như Phase 3.
+- [ ] Audio thiếu không làm crash logic đúng/sai.
+- [ ] Không sửa các link navigation `../main.html`, `../toán chơi.html`, ... trong đợt asset.
+
+## 15. Mobile
 
 Kiểm tra tối thiểu:
 
@@ -148,8 +160,9 @@ Kiểm tra tối thiểu:
 - [ ] Input không bị control mới đẩy khỏi vùng nhìn.
 - [ ] Các nút chính có vùng bấm đủ lớn.
 - [ ] Focus outline không bị cắt khỏi viewport/modal.
+- [ ] Emoji fallback không làm mode button/title nhảy chiều cao lớn.
 
-## 15. Smoke test dev
+## 16. Smoke test dev
 
 Mở URL với `?debug=1`, ví dụ:
 

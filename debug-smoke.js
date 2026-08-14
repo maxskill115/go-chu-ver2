@@ -142,6 +142,17 @@ function runGoChuSmokeTests(){
         test("Storage health/dedupe", false, error.message);
     }
 
+    try {
+        test("Asset health API tồn tại", typeof getGoChuAssetHealth === "function" && typeof printGoChuAssetHealth === "function");
+        const assets = getGoChuAssetHealth();
+        test("UI asset probes đã đăng ký", assets.total >= 5, `${assets.total} asset`);
+        test("Asset report cân bằng", assets.total === assets.ok + assets.missing + assets.pending, `${assets.ok}/${assets.missing}/${assets.pending}`);
+        test("Mọi UI asset probe có fallback", assets.items.every(item => Boolean(item.fallback)));
+        test("Twemoji rules đều có fallback", Array.isArray(promptVisualRules) && promptVisualRules.length > 0 && promptVisualRules.every(rule => Boolean(rule.code && rule.fallback)));
+    } catch (error) {
+        test("Asset reliability", false, error.message);
+    }
+
     const passed = results.filter(item => item.pass).length;
     const failed = results.length - passed;
 

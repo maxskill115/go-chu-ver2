@@ -29,7 +29,8 @@
   - [x] Đợt 2: audit wrapper + stats riêng Nâng cao/Tự do.
   - [x] Đợt 3: accessibility + keyboard navigation.
   - [x] Đợt 4: storage audit + no-op write dedupe.
-  - [ ] Đợt tiếp: asset/offline reliability.
+  - [x] Đợt 5: asset reliability + UI fallback.
+  - [ ] Tiếp theo: offline visual tùy chọn + deploy QA.
 
 ## 3. PR / commit chính
 
@@ -42,156 +43,152 @@
 - Phase 6: PR #7 → `18552e0`.
 - Phase 7: PR #8 → `e281c40`.
 - Phase 8: PR #9 → `10d756e`.
-- Phase 9 stabilization đợt 1: PR #10 → `36d16dc`.
-- Phase 9 stabilization đợt 2: PR #12 → `7d598f2`.
-- Phase 9 accessibility đợt 3: PR #13 → `94bb3ef`.
-- Phase 9 storage audit đợt 4: branch `agent/phase9-storage-audit`, PR/commit cập nhật sau merge.
+- Phase 9 đợt 1: PR #10 → `36d16dc`.
+- Phase 9 đợt 2: PR #12 → `7d598f2`.
+- Phase 9 đợt 3: PR #13 → `94bb3ef`.
+- Phase 9 đợt 4: PR #14 → `d750722`.
+- Phase 9 đợt 5 asset reliability: branch `agent/phase9-asset-reliability`, PR/commit cập nhật sau merge.
 
-## 4. Các hệ thống hiện có
+## 4. Hệ thống chính
 
-### Phase 1 — Feedback lỗi
-- Levenshtein căn sai/thừa/thiếu.
-- Hotfix UI không còn hàng ô đỏ và `SP`.
-
-### Phase 2 — Smart Review
-- Legacy key: `goChuVer2.promptStats.v1`.
-- Entry: `correct`, `wrong`, `lastCorrectAt`, `lastWrongAt`, Phase 8 thêm `accentErrors`, `lastAccentErrorAt`.
+### Smart Review
+- `promptStats`: chỉ Easy / Listen / Memory.
 - Weakness: `wrong * 2 - correct`.
-- **Chỉ Easy / Listen / Memory ghi vào `promptStats`.**
+- Hard/Free không tham gia adaptive Easy.
 
-### Phase 3 — Visual
-- `visual-data.js`, `visual-prompt.js/css`.
+### Visual
 - Twemoji SVG pinned `jdecked/twemoji@17.0.3`.
-- SVG lỗi/mất mạng → emoji fallback.
+- `visual-prompt.js` đã có `img.onerror` → emoji fallback.
 
-### Phase 4 — Listen
-- Web Speech API, chỉ voice `vi-*`.
-- Key voice: `goChuVer2.viVoice.v1`.
-- Speech rate `0.76`.
+### Listen
+- Chỉ voice `vi-*`, speech rate `0.76`.
 - Listen và Memory loại trừ nhau.
 
-### Phase 5 — Memory
-- 2 / 3 / 4 từ; 3 / 5 / 7 giây.
-- Hết thời gian mới mở input.
-
-### Phase 6 — Topic / Level
-- 10 lựa chọn chủ đề.
-- Auto / 1 / 2 / 3 / 4 từ.
-- Auto: mặc định 2; >=8 lượt accuracy <65% → 1; >=15 lượt accuracy >=88% → 3; >=40 lượt accuracy >=92% → 4.
-
-### Phase 7 — Profiles / Dashboard
+### Profiles
 - Registry: `goChuVer2.profiles.v1`.
 - Active: `goChuVer2.activeProfile.v1`.
 - Data: `goChuVer2.profile.<profileId>.v1`.
-- Profile giữ `promptStats`, `modeStats.hard/free`, study time, topic/level và Memory preferences.
-- Voice/volume/hoa-thường là setting thiết bị.
+- Profile giữ `promptStats`, `modeStats.hard/free`, study time, topic/level, Memory preferences.
 
-### Phase 8 — Vietnamese input
+### Vietnamese input
 - `goChuVer2.inputGuide.v1` = `off | telex | vni`.
-- Progress theo từng từ chỉ ở Easy.
-- Accent-only detection nhận `meo → mèo`, `di → đi`.
-- Telex/VNI chỉ gợi ý, không sửa IME/input.
+- Progress theo từ, accent-only detection, Telex/VNI chỉ là guide.
 
 ## 5. Phase 9 — Ổn định hóa
 
 ### Đợt 1 — Smoke test + QA checklist ✅
 PR #10 → `36d16dc`.
 
-- `debug-smoke.js`, `QA_CHECKLIST.md`.
-- Chạy bằng `?debug=1` hoặc `runGoChuSmokeTests()`.
-
-### Đợt 2 — Audit wrapper + stats Nâng cao/Tự do ✅
+### Đợt 2 — Audit wrapper + stats Hard/Free ✅
 PR #12 → `7d598f2`.
 
-- `RUNTIME_ARCHITECTURE.md` khóa/tài liệu hóa load order + wrapper chain.
-- `mode-stats.js` giữ Hard/Free tách khỏi adaptive Easy.
-- Dashboard có tổng và breakdown theo mode.
+- `RUNTIME_ARCHITECTURE.md` khóa load order + wrapper chain.
+- `mode-stats.js` lưu stats Hard/Free riêng theo profile.
 
-### Đợt 3 — Accessibility + keyboard navigation ✅
+### Đợt 3 — Accessibility + keyboard ✅
 PR #13 → `94bb3ef`.
 
-- `accessibility.js/css` không bọc logic học.
-- ARIA state/dialog semantics, focus trap, focus restore, `inert` background.
-- `aria-live`, focus-visible, reduced-motion.
-- Smoke + QA + runtime docs cập nhật.
+- ARIA state/dialog, focus trap, focus restore, inert background.
+- Focus-visible + reduced-motion.
+- Không bọc thêm logic học.
 
-### Đợt 4 — Storage audit + no-op write dedupe ✅
-Branch: `agent/phase9-storage-audit`.
+### Đợt 4 — Storage audit ✅
+PR #14 → `d750722`.
 
-Files/phạm vi:
+- `storage-health.js` compare-before-write cho profile/registry.
+- Không đổi schema/key/version/cadence 15 giây.
+- Không dùng stale memory cache để quyết định skip.
+- Debug: `getGoChuStorageHealth()`, `printGoChuStorageHealth()`, `goChuStorageMetrics`.
 
-- `storage-health.js`.
+### Đợt 5 — Asset reliability + UI fallback ✅
+Branch: `agent/phase9-asset-reliability`.
+
+Files:
+
+- `asset-reliability.js`.
+- `asset-reliability.css`.
+- `ASSET_INVENTORY.md`.
+- `styles.css`.
 - `index.html`.
 - `debug-smoke.js`.
 - `QA_CHECKLIST.md`.
 - `RUNTIME_ARCHITECTURE.md`.
 - `HANDOFF.md`.
 
-#### Mục tiêu
+#### Audit asset
 
-Giảm write `localStorage` dư mà **không đổi schema, không debounce kết quả học, không đổi cadence study timer**.
+`../IMG/...` hiện là dependency của project cha, chưa nằm trong repo này:
 
-#### Thay đổi
+- favicon `Icon_133.png`;
+- title `Icon_135.png`;
+- mode icons `Icon_62.png`, `Icon_70.png`, `Icon_66.png`;
+- Free action `gochu_tudo (58).png`;
+- Free poem icons `gochu_tudo (1..57).png`.
 
-`storage-health.js` nạp sau `mode-stats.js`, trước accessibility/debug để serialization dùng final `normalizeProfileData` có cả `modeStats`.
+Audio binary cũng chưa có trong repo; `Music/README.md` ghi lại 4 file gốc và code giữ nguyên đường dẫn.
 
-Override tương đương:
+Twemoji CDN là nhóm khác: Phase 3 đã có emoji fallback nên không cần probe lại.
 
-- `saveProfileData(profileId, data)`;
-- `saveProfilesRegistry()`.
+Inventory đầy đủ: `ASSET_INVENTORY.md`.
 
-Trước `localStorage.setItem`, code đọc current value và so với JSON mới:
+#### Runtime fallback
 
-- giống → skip write;
-- khác → write như trước.
+`asset-reliability.js` nạp sau storage layer, trước accessibility/debug và **không bọc logic học**.
 
-Quyết định an toàn:
+Probe UI chính:
 
-- **Không dùng memory cache để quyết định skip**, tránh stale state sau import/reset/remove key.
-- Vẫn normalize profile trước serialize.
-- Không đổi key/version/schema.
-- Study time vẫn flush khoảng 15 giây như Phase 7.
-- Prompt result, accent error, Hard/Free result và preferences vẫn save ngay theo logic hiện có.
+- title;
+- Easy / Hard / Free mode icons;
+- Free action icon;
+- icon bài Tự do đang hiển thị.
 
-Debug API:
+Nếu asset tải được → giữ nguyên ảnh gốc.
+
+Nếu lỗi → CSS hiện fallback:
+
+- title `⌨️`;
+- Easy `🔤`;
+- Hard `🧠`;
+- Free `✍️`;
+- Free poem `📖`.
+
+Quyết định kỹ thuật:
+
+- không tạo ảnh thay thế giả;
+- không đổi đường dẫn asset gốc;
+- không probe toàn bộ 57 thumbnail cùng lúc;
+- cache probe Promise theo URL để tránh request trùng;
+- probe async dùng token để kết quả icon cũ không ghi đè icon mới khi đổi bài;
+- favicon thiếu không ảnh hưởng chức năng nên chưa can thiệp;
+- navigation `../main.html`, `../toán chơi.html`, ... không sửa vì đó là integration project cha, không phải asset.
+
+Debug:
 
 ```js
-getGoChuStorageHealth()
-printGoChuStorageHealth()
-goChuStorageMetrics
+getGoChuAssetHealth()
+printGoChuAssetHealth()
 ```
 
-Report gồm:
+Smoke tests kiểm tra:
 
-- số key `goChuVer2.*`;
-- số profile/profile key;
-- dung lượng UTF-8 ước tính;
-- 10 key lớn nhất;
-- số write / write skip / error từ lúc module load.
+- asset health API;
+- số probe được đăng ký;
+- `ok + missing + pending = total`;
+- mọi UI probe có fallback;
+- mọi Twemoji rule có `code` + emoji fallback.
 
-Smoke tests bổ sung:
+## 6. Plan tiếp theo
 
-- storage health API tồn tại;
-- report hợp lệ và nhìn thấy profile;
-- hai profile save giống nhau liên tiếp tạo `profileWriteSkips`;
-- registry không đổi tạo `registryWriteSkips`.
+1. Nếu muốn **offline 100% visual**, lấy danh sách `code` duy nhất từ `promptVisualRules` và chỉ đưa các SVG đang dùng về repo; không tải cả Twemoji.
+2. Audio: chờ binary gốc/upload phù hợp; không thay bằng nhạc khác.
+3. Nếu có URL deploy thực tế, chạy `?debug=1` + `QA_CHECKLIST.md` trên deploy.
+4. Kiểm tra layout fallback trên 360×640 / 390×844 / 640×360.
+5. Sau khi Phase 9 ổn định mới mở roadmap feature mới để tránh chồng module không cần thiết.
 
-QA bổ sung export/import/reset sau dedupe để chắc không có stale storage.
+## 7. Tồn đọng
 
-### Plan tiếp theo Phase 9 — Asset/offline reliability
-
-1. Rà tất cả dependency `../IMG/...`, phân loại: favicon/title/mode/free-poem/navigation.
-2. Không tự tạo/đổi ảnh gốc; trước hết thêm **fallback hiển thị** khi asset ngoài repo thiếu.
-3. Với Free poem icon, cân nhắc fallback emoji/text vì CSS background không có `error` event trực tiếp.
-4. Rà Twemoji CDN: chỉ tải local các SVG thực sự được mapping nếu muốn offline 100%.
-5. Audio binary giữ nguyên đường dẫn cho đến khi có file/binary upload phù hợp; không thay bài nhạc tùy tiện.
-6. Chạy smoke + QA sau mỗi đợt asset để tránh layout shift/mobile regression.
-7. Nếu có URL deploy thực tế, chạy QA trên deploy trước khi mở feature roadmap mới.
-
-## 6. Tồn đọng
-
-- Audio binary remote chưa bổ sung.
-- `../IMG/...` còn phụ thuộc ngoài repo.
+- 4 audio binary gốc chưa có trên remote.
+- `../IMG/...` vẫn là dependency ngoài repo, nhưng UI chính đã có fallback.
+- Free dropdown thumbnail chưa probe toàn bộ; text option vẫn dùng được khi ảnh thiếu.
+- Twemoji vẫn dùng CDN, nhưng đã có emoji fallback; chưa offline SVG 100%.
 - Hai branch thử Phase 2 có thể xóa thủ công.
-- Twemoji đang dùng CDN, chưa offline 100%.
-- Hard/Free đã có stats tổng riêng nhưng adaptive/weakness vẫn cố ý chỉ dành cho Easy.

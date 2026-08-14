@@ -1,0 +1,37 @@
+/* ===== VER2 PHASE 9 - UI ASSET FALLBACK ===== */
+.ui-icon.go-chu-asset-missing,
+.free-poem-icon.go-chu-asset-missing,
+.free-poem-view-icon.go-chu-asset-missing {
+    background-image: none !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: inherit;
+    overflow: visible;
+}
+
+.ui-icon.go-chu-asset-missing::after,
+.free-poem-icon.go-chu-asset-missing::after,
+.free-poem-view-icon.go-chu-asset-missing::after {
+    content: attr(data-asset-fallback);
+    display: inline-block;
+    font-size: .78em;
+    line-height: 1;
+    filter: none;
+    text-shadow: none;
+}
+
+.title-icon.go-chu-asset-missing::after {
+    font-size: .72em;
+}
+
+.free-poem-icon.go-chu-asset-missing,
+.free-poem-view-icon.go-chu-asset-missing {
+    font-size: 22px;
+    background-color: rgba(136, 204, 255, .1);
+}
+
+/* Khi asset thật tải được, giữ nguyên giao diện gốc. */
+.go-chu-asset-ok::after {
+    content: none;
+}
