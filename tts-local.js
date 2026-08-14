@@ -32,10 +32,19 @@ function stopAllListenAudio(){
     clearTimeout(listenSpeechTimer);
     if(typeof speechSupported === "function" && speechSupported()) window.speechSynthesis.cancel();
 }
-function hasVietnameseWebVoice(){
-    return Boolean(typeof refreshVietnameseVoice === "function" && refreshVietnameseVoice());
+function hasVietnameseWebVoice(refresh = false){
+    if(!speechSupported()) return false;
+    if(refresh){
+        if(typeof ensureListenVoiceRuntime === "function") ensureListenVoiceRuntime();
+        else if(typeof refreshVietnameseVoice === "function") refreshVietnameseVoice();
+    }
+    return Boolean(vietnameseVoice);
 }
-function hasAnyListenSource(){ return getLocalTtsCount() > 0 || hasVietnameseWebVoice(); }
+function hasAnyListenSource(refreshVoice = false){
+    if(getLocalTtsCount() > 0) return true;
+    if(!speechSupported()) return false;
+    return refreshVoice ? hasVietnameseWebVoice(true) : true;
+}
 
 const baseApplyAudioLevelsForLocalTts = applyAudioLevels;
 applyAudioLevels = function(){
@@ -45,7 +54,7 @@ applyAudioLevels = function(){
 
 const baseSpeakPromptForLocalTts = speakPrompt;
 function speakWithWebFallback(text){
-    if(!hasVietnameseWebVoice()){
+    if(!hasVietnameseWebVoice(true)){
         updateListenModeBar();
         if(typeof showCenterToast === "function") showCenterToast("Chưa có MP3 cho câu này và máy không có giọng Việt dự phòng", "incorrect");
         return;
@@ -132,13 +141,16 @@ updateListenModeBar = function(){
 
     const localReady = hasLocalTts(currentPrompt);
     const anyLocal = getLocalTtsCount() > 0;
-    const webVoice = hasVietnameseWebVoice();
-    const available = anyLocal || webVoice;
+    /* Khi Listen tắt không gọi getVoices() ở mỗi showText. */
+    const webVoice = listenModeActive && hasVietnameseWebVoice(true) ? vietnameseVoice : vietnameseVoice;
+    const available = listenModeActive
+        ? Boolean(localReady || webVoice)
+        : Boolean(anyLocal || speechSupported());
 
     bar.classList.remove("hidden-by-mode");
     bar.setAttribute("aria-hidden", "false");
     toggle.disabled = !available;
-    replay.disabled = !available || !listenModeActive;
+    replay.disabled = !listenModeActive || !(localReady || webVoice);
 
     if(!available){
         status.textContent = "Chưa có MP3 Google TTS hoặc giọng Việt dự phòng";
@@ -158,13 +170,20 @@ updateListenModeBar = function(){
 
 setListenMode = function(active){
     if(active && currentMode !== "easy") return;
-    const shouldEnable = Boolean(active && currentMode === "easy" && hasAnyListenSource());
+
+    let shouldEnable = false;
+    if(active && currentMode === "easy"){
+        const localReady = hasLocalTts(currentPrompt);
+        const webReady = hasVietnameseWebVoice(true);
+        shouldEnable = Boolean(localReady || webReady);
+    }
+
     listenModeActive = shouldEnable;
     stopAllListenAudio();
 
     if(active && !shouldEnable){
         if(typeof ensureVietnameseVoiceSetting === "function") ensureVietnameseVoiceSetting();
-        if(typeof showCenterToast === "function") showCenterToast("Chưa có MP3 Google TTS và thiết bị không có giọng Việt", "incorrect");
+        if(typeof showCenterToast === "function") showCenterToast("Chưa có MP3 cho câu này và thiết bị không có giọng Việt", "incorrect");
     }
 
     applyListenPromptVisibility();
@@ -192,6 +211,7 @@ function refreshLocalTtsSettingsHint(){
 
 function getGoChuTtsHealth(){
     const total = getLocalTtsCount();
+    const webVoiceAvailable = hasVietnameseWebVoice(true);
     return {
         source: total ? "local-mp3-first" : "web-speech-only",
         manifestCount: total,
@@ -200,10 +220,18 @@ function getGoChuTtsHealth(){
         speakingRate: GO_CHU_TTS_LOCAL_META.speakingRate ?? null,
         generatedAt: GO_CHU_TTS_LOCAL_META.generatedAt || null,
         currentPromptHasLocal: hasLocalTts(currentPrompt),
-        webVoiceAvailable: hasVietnameseWebVoice()
+        webVoiceAvailable
     };
 }
 window.getGoChuTtsHealth = getGoChuTtsHealth;
 
-refreshLocalTtsSettingsHint();
+if(settingsToggleBtn){
+    settingsToggleBtn.addEventListener("click", () => {
+        setTimeout(() => {
+            if(!settingsPanel.classList.contains("hidden")) refreshLocalTtsSettingsHint();
+        }, 0);
+    });
+}
+
+/* Không dựng voice setting / enumerate voice ở startup. */
 updateListenModeBar();
