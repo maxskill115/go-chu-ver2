@@ -20,30 +20,21 @@ function loadPromptStats(){
 function savePromptStats(){
     try {
         localStorage.setItem(GO_CHU_PROMPT_STATS_KEY, JSON.stringify(promptStats));
-    } catch (error) {
-        // localStorage có thể bị chặn ở chế độ riêng tư; web vẫn học bình thường.
-    }
+    } catch (error) {}
 }
 
 function getPromptStatsEntry(prompt){
     const key = String(prompt || "");
     if(!promptStats[key]){
-        promptStats[key] = {
-            correct: 0,
-            wrong: 0,
-            lastCorrectAt: 0,
-            lastWrongAt: 0
-        };
+        promptStats[key] = { correct: 0, wrong: 0, lastCorrectAt: 0, lastWrongAt: 0 };
     }
     return promptStats[key];
 }
 
 function recordPromptResult(prompt, isCorrect){
     if(currentMode !== "easy" || !prompt) return;
-
     const entry = getPromptStatsEntry(prompt);
     const now = Date.now();
-
     if(isCorrect){
         entry.correct += 1;
         entry.lastCorrectAt = now;
@@ -51,7 +42,6 @@ function recordPromptResult(prompt, isCorrect){
         entry.wrong += 1;
         entry.lastWrongAt = now;
     }
-
     savePromptStats();
     updateSmartReviewBar();
 }
@@ -63,7 +53,6 @@ function getPromptWeakness(entry){
 
 function getWeakPromptRecords(){
     const available = new Set(easyWords);
-
     return Object.entries(promptStats)
         .filter(([prompt, entry]) => available.has(prompt) && getPromptWeakness(entry) > 0)
         .map(([prompt, entry]) => ({
@@ -73,23 +62,17 @@ function getWeakPromptRecords(){
             correct: entry.correct || 0,
             lastWrongAt: entry.lastWrongAt || 0
         }))
-        .sort((a, b) =>
-            b.weakness - a.weakness ||
-            b.wrong - a.wrong ||
-            b.lastWrongAt - a.lastWrongAt
-        );
+        .sort((a, b) => b.weakness - a.weakness || b.wrong - a.wrong || b.lastWrongAt - a.lastWrongAt);
 }
 
 function findSafeSmartInsertIndex(round, prompt, preferredIndex){
     if(!round.length) return 0;
-
     for(let offset = 0; offset <= round.length; offset++){
         const index = Math.min(round.length, (preferredIndex + offset) % (round.length + 1));
         const from = Math.max(0, index - 5);
         const to = Math.min(round.length, index + 5);
         if(!round.slice(from, to).includes(prompt)) return index;
     }
-
     return -1;
 }
 
@@ -98,20 +81,15 @@ const plainShuffleEasyWords = shuffleEasyWords;
 function buildSmartEasyRound(previousPrompt = ""){
     const round = plainShuffleEasyWords();
     const weak = getWeakPromptRecords().slice(0, GO_CHU_SMART_EXTRA_LIMIT);
-
     weak.forEach((item, weakIndex) => {
         const preferred = 4 + weakIndex * 5 + Math.floor(Math.random() * 5);
         const insertIndex = findSafeSmartInsertIndex(round, item.prompt, preferred);
         if(insertIndex >= 0) round.splice(insertIndex, 0, item.prompt);
     });
-
     if(previousPrompt && round.length > 1 && round[0] === previousPrompt){
         const swapIndex = round.findIndex((prompt, i) => i > 0 && prompt !== previousPrompt);
-        if(swapIndex > 0){
-            [round[0], round[swapIndex]] = [round[swapIndex], round[0]];
-        }
+        if(swapIndex > 0) [round[0], round[swapIndex]] = [round[swapIndex], round[0]];
     }
-
     return round;
 }
 
@@ -122,7 +100,6 @@ shuffleEasyWords = function(){
 function ensureSmartReviewBar(){
     let bar = document.getElementById("smartReviewBar");
     if(bar) return bar;
-
     bar = document.createElement("div");
     bar.id = "smartReviewBar";
     bar.className = "smart-review-bar";
@@ -145,11 +122,20 @@ function ensureSmartReviewBar(){
 
 function updateSmartReviewBar(){
     ensureSmartReviewBar();
-
     const bar = document.getElementById("smartReviewBar");
     const info = document.getElementById("smartReviewInfo");
     const button = document.getElementById("smartReviewBtn");
     if(!bar || !info || !button) return;
+
+    const isEasy = currentMode === "easy";
+    bar.classList.toggle("hidden-by-mode", !isEasy);
+    bar.setAttribute("aria-hidden", isEasy ? "false" : "true");
+
+    if(!isEasy){
+        info.textContent = "";
+        button.disabled = true;
+        return;
+    }
 
     const weakCount = getWeakPromptRecords().length;
     bar.classList.toggle("review-active", smartReviewActive);
@@ -161,16 +147,13 @@ function updateSmartReviewBar(){
         return;
     }
 
-    info.textContent = weakCount
-        ? `📌 Có ${weakCount} từ/câu cần ôn lại`
-        : "✨ Chưa có từ/câu cần ôn";
+    info.textContent = weakCount ? `📌 Có ${weakCount} từ/câu cần ôn lại` : "✨ Chưa có từ/câu cần ôn";
     button.textContent = weakCount ? `Ôn lại (${Math.min(weakCount, GO_CHU_REVIEW_LIMIT)})` : "Ôn lại";
     button.disabled = weakCount === 0;
 }
 
 function startSmartReview(){
-    if(currentMode !== "easy") setMode("easy");
-
+    if(currentMode !== "easy") return;
     if(smartReviewActive){
         smartReviewActive = false;
         texts = buildSmartEasyRound(currentPrompt);
@@ -180,14 +163,9 @@ function startSmartReview(){
         return;
     }
 
-    const weakPrompts = getWeakPromptRecords()
-        .slice(0, GO_CHU_REVIEW_LIMIT)
-        .map(item => item.prompt);
-
+    const weakPrompts = getWeakPromptRecords().slice(0, GO_CHU_REVIEW_LIMIT).map(item => item.prompt);
     if(!weakPrompts.length){
-        if(typeof showCenterToast === "function"){
-            showCenterToast("✨ Chưa có từ cần ôn", "correct");
-        }
+        if(typeof showCenterToast === "function") showCenterToast("✨ Chưa có từ cần ôn", "correct");
         updateSmartReviewBar();
         return;
     }
@@ -204,10 +182,7 @@ function finishSmartReview(){
     texts = buildSmartEasyRound(currentPrompt);
     index = 0;
     updateSmartReviewBar();
-
-    if(typeof showCenterToast === "function"){
-        showCenterToast("🌟 Ôn tập xong!", "correct");
-    }
+    if(typeof showCenterToast === "function") showCenterToast("🌟 Ôn tập xong!", "correct");
 }
 
 const baseShowTextForSmartReview = showText;
@@ -226,7 +201,6 @@ setMode = function(mode){
 
 nextPromptForCurrentMode = function(){
     if(currentMode === "free") return;
-
     index++;
     if(index >= texts.length){
         if(currentMode === "easy"){
@@ -240,23 +214,17 @@ nextPromptForCurrentMode = function(){
             index = 0;
         }
     }
-
     showText();
 };
 
 checkNext = function(){
     if(currentMode === "free") return;
-
     if(normalizeForCompare(input.value) === normalizeForCompare(currentPrompt)){
         clearTimeout(resultTimer);
         result.className = "correct";
         result.innerText = "🎉 Chính xác! Giỏi quá!";
         playCorrectSound();
-
-        if(currentMode === "easy"){
-            recordPromptResult(currentPrompt, true);
-        }
-
+        if(currentMode === "easy") recordPromptResult(currentPrompt, true);
         index++;
         if(index >= texts.length){
             if(currentMode === "easy"){
@@ -270,14 +238,12 @@ checkNext = function(){
                 index = 0;
             }
         }
-
         resultTimer = setTimeout(showText, NEXT_PROMPT_DELAY_MS);
     }else{
         clearTimeout(resultTimer);
         result.className = "incorrect";
         result.style.opacity = "1";
         showTypingDiff(currentPrompt, input.value);
-
         if(currentMode === "easy" && !smartPromptWrongRecorded){
             smartPromptWrongRecorded = true;
             recordPromptResult(currentPrompt, false);
