@@ -41,7 +41,7 @@
 - [x] Đợt 5 — asset reliability + UI fallback.
 - [x] Đợt 6 — offline visual framework + CI/static verification.
 - [x] Đợt 7 — deploy QA preparation + readiness report.
-- [~] **Đợt 8 — UI scope + visual accuracy + regression fixes.**
+- [x] **Đợt 8 — UI scope + visual accuracy + regression fixes.**
 - [ ] Vendor/commit SVG Twemoji thật nếu muốn offline visual 100%.
 - [ ] Deploy QA thực tế sau khi binary hoàn tất.
 
@@ -76,7 +76,7 @@
 - Handoff Phase 10: PR #18 → `bb6303a`
 - Phase 9 đợt 6 offline visual/CI: PR #19 → `58f295d`
 - Phase 9 đợt 7 deploy QA prep: PR #20 → `24f6673`
-- Phase 9 đợt 8 UI scope/visual fix: branch `agent/ui-scope-visual-fix`, PR/commit cập nhật sau merge.
+- Phase 9 đợt 8 UI scope/visual fix: PR #22 → `14d04bd`
 
 ### Ghi chú tooling lịch sử
 
@@ -136,11 +136,16 @@ Profile giữ `promptStats`, `modeStats.hard/free`, study time, topic/level, Mem
 
 ## 5. Phase 9 đợt 8 — UI scope + visual accuracy
 
-Branch:
+Đã merge qua PR #22 → `14d04bd`.
 
-```text
-agent/ui-scope-visual-fix
-```
+CI của PR #22 PASS toàn bộ, gồm:
+
+- Python tool compile.
+- `node --check` toàn bộ JS root.
+- static repository verification.
+- deploy readiness report.
+- Twemoji dry-run.
+- Google TTS dry-run.
 
 ### Lỗi được báo
 
@@ -149,98 +154,93 @@ agent/ui-scope-visual-fix
 3. Hình minh họa đôi khi không khớp chữ do keyword quá rộng.
 4. Easy có quá nhiều thanh control xếp chồng, gây nặng UI trên mobile/landscape.
 
-### Fix đã thực hiện trên branch
+### Fix đã merge
 
 #### Listen scope
 
 `listen-mode.js`:
 
 - `listenModeBar` thêm `hidden-by-mode` khi `currentMode !== "easy"`.
-- ngoài Easy: `aria-hidden=true`, nút bị disable, status rỗng.
-- `toggleListenMode()` không còn tự chuyển Hard/Free về Easy khi control không thuộc mode đó.
+- ngoài Easy: `aria-hidden=true`, nút disable, status rỗng.
+- `toggleListenMode()` không tự chuyển Hard/Free về Easy.
 - rời Easy vẫn hủy speech timer/Web Speech.
 
 `tts-local.js`:
 
-- local MP3 layer tôn trọng cùng scope Easy.
+- local MP3 layer tôn trọng scope Easy.
 - ngoài Easy: bar ẩn, toggle/replay disable, status rỗng.
 - `setListenMode(true)` ngoài Easy không tự đổi mode.
-- local audio vẫn dừng khi rời Easy.
+- local audio dừng khi rời Easy.
 
 #### Smart Review scope
 
 `smart-review.js`:
 
 - `smartReviewBar` ẩn hoàn toàn ngoài Easy.
-- `startSmartReview()` ngoài Easy return, không tự chuyển mode.
-- Hard/Free không nhìn thấy text/status Ôn lại.
+- `startSmartReview()` ngoài Easy return.
+- Hard/Free không thấy text/status Ôn lại.
 
 #### Memory / Topic-Level
 
-Hai module đã có `hidden-by-mode` từ trước; `ui-scope-fixes.css` thêm rule toàn cục `display:none !important` để chống CSS cascade khác làm hiện trở lại.
+Hai module đã có `hidden-by-mode`; `ui-scope-fixes.css` thêm regression guard `display:none !important` để chống cascade làm hiện trở lại.
 
 #### Visual accuracy
 
-Nguyên nhân cũ: `normalized.includes(keyword)` với keyword mơ hồ:
+Nguyên nhân cũ: `normalized.includes(keyword)` với keyword mơ hồ như `cam`, `cây`, `nước`, `nhà`, `sách`.
 
-```text
-cam
-cây
-nước
-nhà
-sách
-...
-```
-
-Ví dụ dễ sai:
-
-- `màu cam` → hình quả cam.
-- `trái cây` → có thể bị rule cây.
-- cụm chứa `nước` → giọt nước dù nghĩa khác.
-
-Mapping mới trong `visual-data.js` dùng:
+Mapping mới trong `visual-data.js`:
 
 ```text
 exact: [...]      // match toàn prompt
 contains: [...]   // chỉ phrase đủ rõ nghĩa
 ```
 
-Không còn keyword đơn mơ hồ như `cam`, `cây`, `nước`, `nhà` để match đại trà.
+Ví dụ đã loại lỗi:
+
+- `màu cam` không còn tự ra quả cam.
+- `trái cây` không bị match rule cây.
+- cụm chứa `nước` không tự ra giọt nước nếu nghĩa không rõ.
 
 `visual-prompt.js`:
 
-- match exact trước, contains chỉ với phrase đã whitelist.
-- không có rule đủ tin cậy → **ẩn hình**.
-- không ép hình gần nghĩa.
-- Visual chỉ chạy Easy; Hard/Free gọi `hidePromptVisual()`.
-- `setMode` cũng refresh visual ngay để không giữ ảnh Easy khi chuyển mode.
+- exact trước, contains chỉ whitelist phrase.
+- mapping không chắc → ẩn hình.
+- Visual chỉ chạy Easy.
+- chuyển mode refresh visual ngay, không giữ ảnh Easy sang Hard/Free.
 
 #### UI polish
 
-File mới:
+File mới `ui-scope-fixes.css`, import cuối `styles.css`.
+
+- Easy toolbar dùng cùng max-width/spacing.
+- Listen chưa bật chỉ hiện nút `Nghe rồi gõ`.
+- Memory chưa bật chỉ hiện nút `Nhớ rồi gõ`.
+- khi active mới mở replay/status/select chi tiết.
+- landscape thấp giảm padding/min-height.
+- mobile full-width nhưng gọn hơn.
+
+#### Regression guard
+
+CI thêm:
 
 ```text
-ui-scope-fixes.css
+node --check toàn bộ JS
 ```
 
-Được import cuối `styles.css` để đóng vai trò regression guard.
+`tools/verify_repository.py` kiểm tra thêm:
 
-Các thay đổi:
+- `ui-scope-fixes.css` được import.
+- `.hidden-by-mode` có `display:none !important`.
+- Listen/TTS/SmartReview/Visual có Easy-only guard.
+- `visual-data.js` không được quay lại property `keywords:` rộng.
+- visual mapping phải có `exact`/`contains`.
 
-- `.hidden-by-mode { display:none !important; }`.
-- các Easy toolbar dùng cùng max-width/spacing.
-- Listen chưa bật chỉ hiện nút `Nghe rồi gõ`, ẩn Replay/Status.
-- Memory chưa bật chỉ hiện nút `Nhớ rồi gõ`, ẩn select/status.
-- khi bật mới mở controls chi tiết.
-- landscape thấp giảm padding/min-height để ưu tiên prompt + input.
-- mobile giữ toolbar full-width nhưng gọn hơn.
-
-### Invariant mới
+### Invariant
 
 ```text
 Hard/Free không được nhìn thấy UI Easy-specific.
-Visual sai còn tệ hơn không có visual → nếu mapping không chắc thì ẩn.
-Listen/Memory inactive phải gọn, không chiếm cả màn hình.
+Visual sai còn tệ hơn không có visual → không chắc thì ẩn.
+Listen/Memory inactive phải gọn, không chiếm màn hình.
 ```
 
 ---
@@ -262,12 +262,13 @@ Twemoji pinned `jdecked/twemoji@17.0.3`.
 Runtime:
 
 ```text
-1. local SVG nếu manifest có
-2. CDN pinned Twemoji
-3. emoji fallback
+1. semantic rule match
+2. local SVG nếu manifest có
+3. CDN pinned Twemoji
+4. emoji fallback
 ```
 
-Quan trọng: từ Phase 9 đợt 8, **rule semantic phải match trước khi pipeline asset chạy**. Nếu prompt không có rule tin cậy thì không hiện visual nào.
+Nếu semantic rule không match thì không hiện hình.
 
 Files:
 
@@ -286,7 +287,7 @@ Debug: `getGoChuVisualHealth()`.
 
 ## 8. Listen / Google TTS
 
-Runtime Easy-only:
+Runtime **Easy-only**:
 
 ```text
 1. MP3 Google TTS local
@@ -319,15 +320,16 @@ MP3 thật chưa render/commit vì chờ Google Cloud account của người dù
 
 ## 9. CI / QA / deploy
 
-Workflow `.github/workflows/verify.yml` đã PASS PR #19 và #20.
+Workflow `.github/workflows/verify.yml` đã PASS PR #19, #20 và #22.
 
 CI:
 
 1. compile Python tools;
-2. `tools/verify_repository.py`;
-3. `tools/check_deploy_ready.py`;
-4. Twemoji dry-run;
-5. Google TTS dry-run.
+2. check JavaScript syntax;
+3. `tools/verify_repository.py`;
+4. `tools/check_deploy_ready.py`;
+5. Twemoji dry-run;
+6. Google TTS dry-run.
 
 Local QA:
 
@@ -350,14 +352,14 @@ py tools\check_deploy_ready.py --strict
 
 ---
 
-## 10. Việc assistant tiếp tục sau UI fix
+## 10. Việc assistant tiếp tục
 
-1. Chạy CI cho PR UI scope/visual.
-2. Nếu PASS → squash merge.
-3. Audit thêm desktop/mobile CSS sau merge.
-4. Rà console/runtime regression từ wrapper chain.
-5. Rà mapping visual còn cụm nào mơ hồ.
-6. Rà branch/file thừa.
+1. Audit thêm desktop/mobile CSS sau UI scope merge.
+2. Rà ARIA/state khi chuyển Easy ↔ Hard ↔ Free.
+3. Rà wrapper chain để tìm state bị giữ lại sau chuyển mode.
+4. Rà visual whitelist còn cụm nào mơ hồ/thiếu rõ ràng.
+5. Rà branch/file thừa và docs dependency.
+6. Chuẩn bị release checklist cuối.
 
 ---
 
