@@ -1,0 +1,91 @@
+/* ===== VER2 PHASE 6 - CHỦ ĐỀ + CẤP ĐỘ ===== */
+.topic-level-bar{
+    margin:10px 0 12px;
+    display:grid;
+    grid-template-columns:minmax(180px,1fr) minmax(150px,.8fr) minmax(180px,1fr);
+    gap:10px;
+    align-items:end;
+    padding:10px 12px;
+    border-radius:14px;
+    border:1px solid rgba(136,204,255,.28);
+    background:rgba(11,29,50,.48);
+}
+
+.topic-level-bar.hidden-by-mode{
+    display:none;
+}
+
+.topic-level-field{
+    display:grid;
+    gap:4px;
+    color:#cfe6fa;
+    font-size:12px;
+    font-weight:800;
+}
+
+.topic-level-select{
+    width:100%;
+    min-height:44px;
+    padding:8px 32px 8px 10px;
+    border-radius:10px;
+    border:1px solid #668baa;
+    background:#102945;
+    color:#fff;
+    font-size:15px;
+    font-weight:750;
+}
+
+.topic-level-select:disabled{
+    opacity:.58;
+}
+
+.topic-level-status{
+    align-self:center;
+    justify-self:end;
+    min-width:0;
+    color:#cdeaff;
+    font-size:14px;
+    font-weight:800;
+    text-align:right;
+    line-height:1.35;
+}
+
+@media (max-width:768px){
+    .topic-level-bar{
+        grid-template-columns:1fr 1fr;
+        gap:8px;
+    }
+
+    .topic-level-status{
+        grid-column:1 / -1;
+        justify-self:center;
+        text-align:center;
+    }
+}
+
+@media (max-width:440px){
+    .topic-level-bar{
+        grid-template-columns:1fr;
+    }
+
+    .topic-level-status{
+        grid-column:auto;
+    }
+}
+
+@media (max-height:560px) and (orientation:landscape){
+    .topic-level-bar{
+        margin:5px 0 7px;
+        padding:6px 8px;
+    }
+
+    .topic-level-select{
+        min-height:38px;
+        padding-top:6px;
+        padding-bottom:6px;
+    }
+
+    .topic-level-status{
+        font-size:12px;
+    }
+}
