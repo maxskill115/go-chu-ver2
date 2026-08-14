@@ -89,15 +89,21 @@ function updateListenModeBar(){
     const supported = speechSupported();
     const isEasy = currentMode === "easy";
 
+    /* Listen là tính năng RIÊNG của Easy: ngoài Easy phải ẩn hẳn UI, không chỉ disable. */
+    bar.classList.toggle("hidden-by-mode", !isEasy);
+    bar.setAttribute("aria-hidden", isEasy ? "false" : "true");
     bar.classList.toggle("active", listenModeActive && isEasy);
-    toggle.disabled = !supported;
+
+    toggle.disabled = !supported || !isEasy;
     replay.disabled = !supported || !listenModeActive || !isEasy;
     toggle.textContent = listenModeActive && isEasy ? "👀 Hiện chữ" : "🎧 Nghe rồi gõ";
 
-    if(!supported){
+    if(!isEasy){
+        status.textContent = "";
+    }else if(!supported){
         status.textContent = "Thiết bị này chưa hỗ trợ đọc chữ";
-    }else if(listenModeActive && isEasy){
-        status.textContent = vietnameseVoice ? "Đang dùng giọng tiếng Việt" : "Đang dùng giọng đọc mặc định";
+    }else if(listenModeActive){
+        status.textContent = vietnameseVoice ? "Đang dùng giọng tiếng Việt" : "";
     }else{
         status.textContent = "";
     }
@@ -106,7 +112,7 @@ function updateListenModeBar(){
 function setListenMode(active){
     if(active && currentMode !== "easy") setMode("easy");
 
-    listenModeActive = Boolean(active && speechSupported());
+    listenModeActive = Boolean(active && currentMode === "easy" && speechSupported());
     clearTimeout(listenSpeechTimer);
 
     if(!listenModeActive && speechSupported()){
@@ -121,7 +127,8 @@ function setListenMode(active){
 }
 
 function toggleListenMode(){
-    setListenMode(!(listenModeActive && currentMode === "easy"));
+    if(currentMode !== "easy") return;
+    setListenMode(!listenModeActive);
 }
 
 const baseShowTextForListen = showText;
@@ -136,6 +143,7 @@ const baseSetModeForListen = setMode;
 setMode = function(mode){
     if(mode !== "easy" && listenModeActive){
         listenModeActive = false;
+        clearTimeout(listenSpeechTimer);
         if(speechSupported()) window.speechSynthesis.cancel();
     }
 
