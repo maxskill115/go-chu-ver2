@@ -39,7 +39,7 @@ Web HTML/CSS/JS thuần cho bé luyện **đọc → gõ → sửa lỗi → ôn
 - [x] Đợt 7 — deploy QA prep + readiness report.
 - [x] Đợt 8 — UI scope + visual accuracy + regression guards.
 - [x] Đợt 9 — visual mapping round 2.
-- [~] **Đợt 10 — freeze/stability audit + runtime diagnostics.**
+- [x] **Đợt 10 — freeze/stability audit + runtime diagnostics.**
 - [ ] Vendor/commit SVG Twemoji thật nếu muốn offline visual 100%.
 - [ ] Deploy QA thực tế sau khi binary hoàn tất.
 
@@ -63,7 +63,8 @@ Web HTML/CSS/JS thuần cho bé luyện **đọc → gõ → sửa lỗi → ôn
 - Hotfix UX/voice: PR #5 → `26cdb63`
 - Phase 5: PR #6 → `daecd42`
 - Phase 6: PR #7 → `18552e0`
-- Phase 7: PR #8 → `10d756e`
+- Phase 7: PR #8 → `e281c40`
+- Phase 8: PR #9 → `10d756e`
 - Phase 9 đợt 1: PR #10 → `36d16dc`
 - Phase 9 đợt 2: PR #12 → `7d598f2`
 - Phase 9 đợt 3: PR #13 → `94bb3ef`
@@ -76,7 +77,7 @@ Web HTML/CSS/JS thuần cho bé luyện **đọc → gõ → sửa lỗi → ôn
 - Phase 9 đợt 8: PR #22 → `14d04bd`
 - Handoff đợt 8: PR #23 → `6b73ff8`
 - Phase 9 đợt 9 visual round 2: PR #24 → `ed76406`
-- Phase 9 đợt 10 freeze/stability: branch `agent/freeze-stability-fix`, PR/commit cập nhật sau merge.
+- Phase 9 đợt 10 freeze/stability: PR #26 → `25d2727`
 
 Tooling scaffolding trước đợt 6:
 
@@ -147,11 +148,9 @@ Mở rộng visual đúng nghĩa cho sư tử, hổ, gấu, sói, cáo, nai/hư�
 
 ## 6. Freeze / stability audit — Phase 9 đợt 10
 
-Branch:
+Đã merge qua PR #26 → `25d2727`.
 
-```text
-agent/freeze-stability-fix
-```
+CI ban đầu bắt một false-positive do verifier match chữ `requestFullscreen` trong comment. Verifier được sửa để chỉ bắt runtime thật; run sau đó PASS toàn bộ trước khi merge.
 
 ### Nguyên nhân nghiêm trọng đã tìm thấy
 
@@ -165,7 +164,7 @@ wheel
 
 Điều này có nghĩa mỗi lần bé gõ phím hoặc cuộn chuột, browser có thể nhận thêm yêu cầu `requestFullscreen()`. Nếu browser từ chối hoặc fullscreen bị thoát, yêu cầu có thể lặp liên tục và gây giật/đơ.
 
-### Fix đã thực hiện
+### Fix đã merge
 
 #### 1. Bỏ auto-fullscreen hoàn toàn
 
@@ -235,7 +234,7 @@ printGoChuPerformanceHealth()
 
 `tools/verify_repository.py` fail nếu:
 
-- auto-fullscreen quay lại `script.js`;
+- auto-fullscreen runtime quay lại `script.js`;
 - listener nặng trên `wheel/keydown` quay lại;
 - Free resize/input mất rAF throttle;
 - Free dropdown mất single-render guard;
@@ -264,7 +263,7 @@ Nếu còn treo phải có performance/error diagnostics để lần ra nguyên 
 5. Twemoji dry-run;
 6. Google TTS dry-run.
 
-CI đã PASS các PR #19, #20, #22, #24.
+CI đã PASS các PR #19, #20, #22, #24 và #26.
 
 ---
 
@@ -341,10 +340,10 @@ printGoChuPerformanceHealth()
 
 ## 11. Việc assistant tiếp tục
 
-1. Chạy CI Phase 9 đợt 10 và merge nếu PASS.
-2. Nếu user vẫn thấy treo, lấy `printGoChuPerformanceHealth()` sau phiên sử dụng để xác định long task/error.
-3. Audit tiếp background audio lifecycle và wrapper chain nếu diagnostics còn báo long task.
-4. Rà desktop/mobile CSS và branch/file thừa.
+1. Nếu vẫn có treo sau PR #26, dùng diagnostics để xác định long task/error cụ thể thay vì đoán.
+2. Audit background audio lifecycle và wrapper chain nếu diagnostics còn báo long task.
+3. Rà desktop/mobile CSS và branch/file thừa.
+4. Tiếp tục giảm công việc đồng bộ trên main thread nếu profiler chỉ ra điểm nóng.
 
 ---
 
