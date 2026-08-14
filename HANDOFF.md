@@ -31,7 +31,9 @@
   - [x] Đợt 3: accessibility + keyboard navigation.
   - [x] Đợt 4: storage audit + no-op write dedupe.
   - [x] Đợt 5: asset reliability + UI fallback.
-  - [ ] Offline Twemoji SVG local + deploy QA: để sau, không chặn Phase 10.
+  - [~] Đợt 6: offline visual framework + CI/static verification.
+  - [ ] Vendor/commit SVG Twemoji thật.
+  - [ ] Deploy QA thực tế.
 - [~] **Phase 10** — Pre-rendered Google TTS MP3.
   - [x] Runtime MP3 local-first + Web Speech fallback.
   - [x] Google Cloud TTS renderer + Windows `.bat`.
@@ -57,6 +59,8 @@
 - Phase 9 đợt 4: PR #14 → `d750722`.
 - Phase 9 đợt 5: PR #15 → `0e0ce0e`.
 - Phase 10 Google TTS framework: PR #17 → `b7e52fd`.
+- Handoff bookkeeping Phase 10: PR #18 → `bb6303a`.
+- Phase 9 đợt 6 offline visual/CI: branch `agent/offline-visual-ci`, PR/commit cập nhật sau merge.
 
 ## 4. Hệ thống chính
 
@@ -68,13 +72,16 @@
 
 ### Visual
 
-- Twemoji SVG pinned `jdecked/twemoji@17.0.3`.
-- `visual-prompt.js` có `img.onerror` → emoji fallback.
+- Twemoji pinned `jdecked/twemoji@17.0.3`.
+- Runtime mới ưu tiên: **local SVG → CDN → emoji**.
+- Local manifest: `twemoji-local-manifest.js`.
+- Vendor tool: `tools/vendor_twemoji.py` / `tools/vendor_twemoji.bat`.
+- Debug: `getGoChuVisualHealth()`.
 
 ### Listen
 
-- Phase 4/hotfix: Web Speech chỉ dùng voice `vi-*`, không dùng giọng ngoại ngữ.
-- Phase 10: nếu prompt có MP3 local thì **MP3 được ưu tiên**; Web Speech chỉ là fallback.
+- Phase 4/hotfix: Web Speech chỉ dùng voice `vi-*`.
+- Phase 10: MP3 local ưu tiên; Web Speech chỉ fallback.
 - Listen và Memory loại trừ nhau.
 
 ### Profiles
@@ -105,74 +112,121 @@ PR #13 → `94bb3ef`.
 
 - ARIA state/dialog, focus trap, focus restore, inert background.
 - Focus-visible + reduced-motion.
-- Không bọc thêm logic học.
 
 ### Đợt 4 — Storage audit ✅
 PR #14 → `d750722`.
 
 - `storage-health.js` compare-before-write cho profile/registry.
 - Không đổi schema/key/version/cadence 15 giây.
-- Debug: `getGoChuStorageHealth()`, `printGoChuStorageHealth()`, `goChuStorageMetrics`.
 
 ### Đợt 5 — Asset reliability + UI fallback ✅
 PR #15 → `0e0ce0e`.
 
-- `ASSET_INVENTORY.md` phân loại `../IMG`, Twemoji CDN, audio binary và navigation project cha.
-- `asset-reliability.js/css` giữ asset gốc nếu tải được; thiếu mới fallback emoji/text.
-- Không thay audio gốc và không tạo asset giả.
-- Debug: `getGoChuAssetHealth()`, `printGoChuAssetHealth()`.
+- `../IMG` asset chính có fallback emoji/text.
+- `ASSET_INVENTORY.md` phân loại asset ngoài repo.
+
+### Đợt 6 — Offline visual framework + CI/static verification 🟡
+
+Mục tiêu: hoàn thiện các phần không cần Google credential trong lúc Phase 10 chờ người dùng render MP3.
+
+#### Scaffolding đã vào `main`
+
+Các file khung được tạo trực tiếp trước khi branch đợt 6 được mở:
+
+- `tools/vendor_twemoji.py` — commit `c35c53f`.
+- `twemoji-local-manifest.js` — commit `a98d2c5`.
+- `OFFLINE_VISUAL.md` — commit `853541d`.
+
+Có một file `BRANCH_MARKER.tmp` tạo nhầm trong lúc chuyển tool rồi đã xóa ngay; không còn trong tree hiện tại. Từ phần runtime/CI trở đi quay lại quy trình branch/PR.
+
+#### Offline visual runtime
+
+Branch: `agent/offline-visual-ci`.
+
+`visual-prompt.js` dùng thứ tự:
+
+```text
+1. local SVG nếu `twemoji-local-manifest.js` có code
+2. CDN Twemoji pinned 17.0.3
+3. emoji fallback
+```
+
+Nếu local entry tồn tại nhưng file lỗi, chỉ thử CDN một lần rồi fallback emoji.
+
+`getGoChuVisualHealth()` trả:
+
+- version;
+- số code duy nhất;
+- số SVG local;
+- coverage %;
+- nguồn hình hiện tại (`local`, `cdn`, `emoji`, ...).
+
+#### Vendor Twemoji
+
+`tools/vendor_twemoji.py`:
+
+- đọc `code` duy nhất từ `visual-data.js`;
+- không tải cả bộ Twemoji;
+- tải đúng `assets/twemoji/<code>.svg` đang dùng;
+- skip file có sẵn;
+- `--force` tải đè;
+- `--dry-run` không cần network;
+- tự sinh lại `twemoji-local-manifest.js` từ file thực sự tồn tại.
+
+Windows wrapper:
+
+```bat
+tools\vendor_twemoji.bat
+```
+
+#### CI / static verification
+
+Files:
+
+- `.github/workflows/verify.yml`.
+- `tools/verify_repository.py`.
+
+CI chạy trên PR và push `main`:
+
+1. Python compile renderer/vendor/verifier.
+2. Static repo verification.
+3. Twemoji vendor dry-run.
+4. Google TTS renderer dry-run 5 prompt.
+
+CI **không gọi Google API và không tải asset mạng thật**.
+
+Static verifier kiểm tra:
+
+- mọi script local trong `index.html` tồn tại;
+- load order runtime chính;
+- Twemoji rules/manifest/path/file consistency;
+- TTS manifest provider + không có chuỗi giống Google API key phổ biến;
+- build tools bắt buộc tồn tại.
+
+Tài liệu runtime đã cập nhật `RUNTIME_ARCHITECTURE.md`.
 
 ## 6. Phase 10 — Pre-rendered Google TTS MP3
 
-Framework đã merge qua PR #17 → `b7e52fd`. Phần còn lại của Phase 10 là render và commit MP3 thật.
+Framework đã merge qua PR #17 → `b7e52fd`. Phần còn lại là render và commit MP3 thật.
 
-### Mục tiêu
-
-Chất lượng âm đọc chữ/cụm từ không còn phụ thuộc voice tiếng Việt có sẵn trên Windows/Chrome. Mỗi prompt Easy được render sẵn thành **một MP3 riêng**, sau đó web chỉ phát file local.
-
-### Quyết định kiến trúc
-
-Runtime ưu tiên:
+Runtime:
 
 ```text
 1. MP3 Google TTS local
 2. Web Speech voice tiếng Việt
-3. báo thiếu audio nếu cả hai đều không có
+3. báo thiếu audio
 ```
 
-Google API chỉ chạy **build-time/local**, không chạy khi bé đang học.
+Files chính:
 
-Không lưu Google credential/API key trong repo hoặc browser.
-
-### Files mới
-
-- `tts-manifest.js` — map prompt → MP3; bản committed ban đầu rỗng.
-- `tts-local.js` — local MP3 first + Web Speech fallback.
-- `TTS_RENDERING.md` — hướng dẫn setup/render.
-- `tools/render_google_tts.py` — renderer Google Cloud TTS.
-- `tools/requirements-tts.txt`.
+- `tts-manifest.js`.
+- `tts-local.js`.
+- `tools/render_google_tts.py`.
 - `tools/setup_google_tts.bat`.
 - `tools/render_google_tts.bat`.
-- `Audio/tts/README.md`.
+- `TTS_RENDERING.md`.
 
-### Renderer
-
-Nguồn: `data-easy.js` → `easyWords`.
-
-Quy tắc:
-
-- normalize Unicode NFC;
-- loại prompt trùng nhưng giữ thứ tự đầu tiên;
-- mỗi prompt → `Audio/tts/<sha1-16>.mp3`;
-- tên file không dùng trực tiếp tiếng Việt để tránh vấn đề filesystem/URL;
-- file có sẵn → SKIP để resume;
-- `--force` để render đè;
-- `--limit` / `--only` chỉ giới hạn request API của lần chạy;
-- manifest sau cùng luôn quét **toàn bộ easyWords + MP3 đang tồn tại**, nên partial render không làm mất entry cũ;
-- request lỗi không hủy toàn batch;
-- `_sample.mp3` không vào manifest.
-
-Default hiện tại:
+Default renderer:
 
 ```text
 language: vi-VN
@@ -181,116 +235,36 @@ speaking rate: 0.82
 encoding: MP3
 ```
 
-Có thể đổi bằng command line; khi đổi voice/tốc độ cho toàn bộ bộ audio thì dùng `--force`.
-
-### Windows workflow
-
-Setup một lần:
-
-```bat
-tools\setup_google_tts.bat
-```
-
-Nghe sample:
-
-```bat
-tools\render_google_tts.bat --sample "bé đi học"
-```
-
-Liệt kê voice:
-
-```bat
-tools\render_google_tts.bat --list-voices
-```
-
-Render toàn bộ:
-
-```bat
-tools\render_google_tts.bat
-```
-
-Hoặc test trước 10 câu:
-
-```bat
-tools\render_google_tts.bat --limit 10
-```
-
-Sau khi render:
-
-```bat
-git add Audio\tts tts-manifest.js
-git commit -m "audio: render giọng đọc Google TTS"
-git push
-```
-
-### Runtime `tts-local.js`
-
-- `speakPrompt()` ưu tiên MP3 manifest.
-- Nếu file lỗi/404 → đánh dấu missing trong session và fallback Web Speech voice Việt.
-- Guard chống `error` + `play()` rejection gọi fallback hai lần.
-- `NotAllowedError` do autoplay không bị coi là file missing.
-- Chuyển prompt dừng nguồn âm cũ ngay trước khi lên lịch phát prompt mới.
-- `setListenMode()` có thể bật chỉ với MP3 local, không bắt buộc máy phải có Web Speech voice Việt.
-- Rời Easy → dừng MP3.
-- Bật Memory → Listen bị tắt thông qua wrapper hiện có → MP3 dừng.
-- `applyAudioLevels()` được bọc để master volume / giảm âm thanh áp dụng cho MP3.
-- Status cho biết `MP3 Google TTS` hoặc `Web Speech dự phòng`.
-- Settings voice trình duyệt vẫn giữ để làm fallback.
-
-Debug:
-
-```js
-getGoChuTtsHealth()
-```
-
-### Load order quan trọng
-
-```text
-data-easy.js
-→ tts-manifest.js
-→ ...
-→ listen-mode.js
-→ ux-hotfix.js
-→ tts-local.js
-→ memory-mode.js
-→ ...
-```
-
-Chi tiết wrapper: `RUNTIME_ARCHITECTURE.md`.
-
-### Trạng thái binary
-
-**Chưa có MP3 Google TTS thật trên remote trong commit Phase 10 framework.**
-
-Lý do: renderer cần Google Cloud project + Cloud TTS API + ADC/billing/quota của tài khoản người dùng. Assistant không đưa credential bí mật vào repo.
-
-Khi manifest rỗng, web vẫn chạy bằng Web Speech tiếng Việt như trước nên merge framework không làm hỏng Listen mode.
+MP3 thật chưa có trên remote vì cần Google Cloud project + ADC/billing/quota của người dùng.
 
 ## 7. Plan tiếp theo
 
-### Ưu tiên ngay — hoàn thiện Google TTS
+### Assistant có thể tiếp tục không cần người dùng
 
-1. Người dùng chạy `tools\setup_google_tts.bat` trên Windows.
-2. Chạy `--list-voices` và nghe sample 2–3 voice nếu muốn so sánh.
-3. Chốt voice + speaking rate phù hợp cho bé.
-4. Render thử 10 câu, mở web kiểm tra Listen/Nghe lại/volume/Memory.
-5. Render toàn bộ `easyWords`.
-6. Commit `Audio/tts/*.mp3` + `tts-manifest.js`.
-7. Chạy `?debug=1` và `QA_CHECKLIST.md` với manifest đầy đủ.
-8. Sau khi coverage MP3 đạt 100%, vẫn giữ Web Speech fallback ít nhất một phase để an toàn.
+1. Merge Phase 9 đợt 6 sau khi CI PASS.
+2. Kiểm tra workflow/status sau merge.
+3. Chuẩn bị deploy QA checklist/report và static hosting notes.
+4. Rà soát mobile CSS/regression bằng static audit.
+5. Rà soát repo cho file thừa/branch thừa và dependency docs.
 
-### Sau TTS
+### Việc chờ người dùng
 
-1. Offline Twemoji: chỉ kéo các SVG thực sự dùng trong `promptVisualRules`, không tải cả bộ.
-2. Bổ sung 4 audio UI/background gốc nếu có binary nguồn.
-3. QA deploy thực tế trên desktop/mobile.
-4. Sau khi ổn định mới mở feature roadmap mới.
+1. Google TTS: chạy setup, nghe sample, chốt voice/rate, render MP3 thật.
+2. Twemoji local binary: có thể chạy `tools\vendor_twemoji.bat` trên máy có mạng rồi commit SVG; runtime đã sẵn sàng dù chưa làm bước này.
+3. 4 audio UI/background gốc nếu muốn đưa binary lên remote.
+
+### Sau khi binary hoàn tất
+
+1. QA `?debug=1` với MP3 + SVG local đầy đủ.
+2. Test offline/network blocked.
+3. Test 360×640 / 390×844 / 640×360.
+4. Deploy QA thực tế.
 
 ## 8. Tồn đọng
 
 - MP3 Google TTS chưa render thật trên remote.
+- SVG Twemoji local chưa vendor/commit thật; hiện có local-first framework + CDN/emoji fallback.
 - 4 audio binary gốc trong `Music/README.md` chưa có trên remote.
 - `../IMG/...` vẫn là dependency ngoài repo, nhưng UI chính đã có fallback.
 - Free dropdown thumbnail chưa probe toàn bộ; text option vẫn dùng được khi ảnh thiếu.
-- Twemoji vẫn dùng CDN; có emoji fallback nhưng chưa offline SVG 100%.
 - Hai branch thử Phase 2 có thể xóa thủ công.
