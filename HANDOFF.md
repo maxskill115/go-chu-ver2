@@ -27,7 +27,8 @@
 - [~] **Phase 9** — Ổn định hóa, QA, offline, mở rộng stats.
   - [x] Đợt 1: smoke test + QA checklist.
   - [x] Đợt 2: audit wrapper + stats riêng Nâng cao/Tự do.
-  - [ ] Đợt tiếp: asset/offline + accessibility + storage audit.
+  - [x] Đợt 3: accessibility + keyboard navigation.
+  - [ ] Đợt tiếp: storage audit + asset/offline reliability.
 
 ## 3. PR / commit chính
 
@@ -41,7 +42,8 @@
 - Phase 7: PR #8 → `e281c40`.
 - Phase 8: PR #9 → `10d756e`.
 - Phase 9 stabilization đợt 1: PR #10 → `36d16dc`.
-- Phase 9 stabilization đợt 2: branch `agent/phase9-stabilization-2`, PR/commit cập nhật sau merge.
+- Phase 9 stabilization đợt 2: PR #12 → `7d598f2`.
+- Phase 9 accessibility đợt 3: branch `agent/phase9-accessibility`, PR/commit cập nhật sau merge.
 
 ## 4. Các hệ thống hiện có
 
@@ -131,64 +133,28 @@ Behavior:
 - Composition events được tôn trọng.
 - Telex: `ă aw`, `â aa`, `ê ee`, `ô oo`, `ơ ow`, `ư uw`, `đ dd`, tone `s/f/r/x/j`.
 - VNI: `ă a8`, `â a6`, `ê e6`, `ô o6`, `ơ o7`, `ư u7`, `đ d9`, tone `1/2/3/4/5`.
-- Đã test thủ công mapping: `bé`, `mèo`, `đường`, `tiếng`, `trường`, `cảm`, `ơn`, `người`, `học`, `chữ`.
 
 ## 5. Phase 9 — Ổn định hóa
 
 ### Đợt 1 — Smoke test + QA checklist ✅
 
-Đã merge qua PR #10 → `36d16dc`:
+PR #10 → `36d16dc`.
 
-- `debug-smoke.js`.
-- `QA_CHECKLIST.md`.
-- `index.html` nạp `debug-smoke.js` sau toàn bộ app.
-- Smoke test mặc định không tự chạy.
-
-Chạy bằng:
-
-```text
-index.html?debug=1
-```
-
-hoặc Console:
-
-```js
-runGoChuSmokeTests()
-```
+- Thêm `debug-smoke.js` và `QA_CHECKLIST.md`.
+- Smoke test mặc định không chạy; dùng `?debug=1` hoặc `runGoChuSmokeTests()`.
 
 ### Đợt 2 — Audit wrapper + stats Nâng cao/Tự do ✅
 
-Branch: `agent/phase9-stabilization-2`.
+PR #12 → `7d598f2`.
 
-Files/phạm vi:
+- Thêm `RUNTIME_ARCHITECTURE.md` để khóa/tài liệu hóa load order và wrapper chain.
+- Thêm `mode-stats.js` sau `script.js`.
+- Hard/Free có `modeStats` riêng theo profile, không ghi vào `promptStats` adaptive Easy.
+- Dashboard tổng quan cộng Easy + Hard + Free, đồng thời có breakdown theo mode.
+- Hard/Free sai lặp trong cùng prompt/target chỉ ghi tối đa 1 lần sai trước khi hoàn thành đúng.
+- Smoke test có runtime function/invariant/schema checks.
 
-- `mode-stats.js` — stats riêng Hard/Free.
-- `RUNTIME_ARCHITECTURE.md` — tài liệu load order và wrapper chain.
-- `debug-smoke.js` — thêm runtime/schema tests.
-- `index.html` — nạp `mode-stats.js` **sau `script.js`**.
-- `HANDOFF.md`.
-
-#### Kết quả audit wrapper
-
-Không refactor lớn vì chuỗi hiện tại đang hoạt động và chưa phát hiện vòng gọi đệ quy. Thứ tự chính được khóa/tài liệu hóa trong `RUNTIME_ARCHITECTURE.md`.
-
-Chuỗi quan trọng:
-
-- `showText`: core → smart → visual → listen → memory → topic → vietnamese → mode-stats.
-- `setMode`: core → smart → listen → memory → topic → vietnamese.
-- `checkNext`: core → smart implementation → memory wrapper → mode-stats wrapper.
-- `showTypingDiff`: core → UX hotfix renderer → Vietnamese accent wrapper.
-- `setListenMode`: listen → UX voice guard → memory mutual-exclusion → Vietnamese guide refresh.
-
-Invariant bắt buộc:
-
-- Listen và Memory không cùng active.
-- Mỗi wrapper gọi base đúng một lần.
-- Module nào cần `submitFreeAnswer`/`setFreeTarget` phải nạp sau `script.js`.
-
-#### Stats Nâng cao / Tự do
-
-Schema profile bổ sung:
+Schema:
 
 ```text
 modeStats: {
@@ -197,36 +163,64 @@ modeStats: {
 }
 ```
 
-Quy tắc:
+Invariant:
 
-- Hard: cùng một prompt sai nhiều lần chỉ ghi tối đa **1 sai**; khi giải đúng ghi **1 đúng**.
-- Free: cùng một target sai nhiều lần chỉ ghi tối đa **1 sai**; hoàn thành đúng ghi **1 đúng**.
-- `modeStats` được lưu trong đúng hồ sơ bé hiện tại và đi theo export/import backup.
-- Hard/Free **không ghi vào `promptStats`**, không tham gia weakness, Ôn lại, topic Auto level hoặc adaptive Easy.
-- Dashboard tổng quan `Lượt luyện / Đúng / Sai / Chính xác` cộng Easy + Hard + Free.
-- Dashboard thêm mục **Theo chế độ** để xem riêng Đơn giản / Nâng cao / Tự do.
-- `Cần ôn` và `Lỗi dấu` vẫn là dữ liệu Easy.
+- Listen và Memory không cùng active.
+- Mỗi wrapper gọi base đúng một lần.
+- Hard/Free không tham gia weakness, Ôn lại hay Auto level của Easy.
 
-#### Smoke test mở rộng
+### Đợt 3 — Accessibility + keyboard navigation ✅
 
-Đã thêm kiểm tra:
+Branch: `agent/phase9-accessibility`.
 
-- final runtime functions tồn tại: `showText`, `setMode`, `checkNext`, `nextPromptForCurrentMode`, `submitFreeAnswer`, `setListenMode`, `setMemoryMode`;
-- Listen/Memory không cùng active;
-- profile có `modeStats.hard/free`;
-- schema Hard/Free có `attempts = correct + wrong`;
-- Hard/Free không bị đưa vào `promptStats` adaptive.
+Files/phạm vi:
+
+- `accessibility.js`.
+- `accessibility.css`.
+- `styles.css`.
+- `index.html`.
+- `debug-smoke.js`.
+- `QA_CHECKLIST.md`.
+- `RUNTIME_ARCHITECTURE.md`.
+- `HANDOFF.md`.
+
+Quyết định kỹ thuật:
+
+- **Không bọc thêm `showText`, `setMode`, `checkNext` hay logic học.** Accessibility chỉ quan sát DOM/trạng thái UI để giảm rủi ro regression.
+- `accessibility.js` nạp sau `mode-stats.js` và trước `debug-smoke.js`.
+
+Đã thêm:
+
+- `aria-controls`, `aria-expanded`, `aria-hidden` cho Settings / game selector / profile dashboard.
+- `role="dialog"`, `aria-modal="true"`, `aria-labelledby` cho game selector; profile dashboard giữ dialog semantics có sẵn.
+- `aria-live="polite"` cho feedback/result và các status chính.
+- Input có `aria-describedby` trỏ tới feedback và Vietnamese guide khi tồn tại.
+- Mở profile dashboard → focus vào nút đóng.
+- Mở game selector → focus vào lựa chọn đầu tiên.
+- Tab / Shift+Tab bị giữ trong modal đang mở.
+- Khi đóng modal → focus trả về đúng nút 👤 hoặc ☰ đã mở modal.
+- Background `.container` + HUD đặt `inert` khi modal mở để keyboard không lọt ra ngoài.
+- Focus-visible outline rõ cho button/input/select/textarea.
+- `prefers-reduced-motion: reduce` gần như tắt animation/transition.
+- Không thay đổi behavior Escape hiện có; chỉ tận dụng handler cũ.
+
+Smoke test bổ sung:
+
+- Settings/Game/Profile có `aria-controls` đúng.
+- `result` có `aria-live="polite"`.
+- Game selector + profile dashboard có dialog semantics.
+
+QA checklist bổ sung keyboard-only, focus trap, focus restore, inert và reduced-motion.
 
 ### Plan tiếp theo Phase 9
 
-1. Chạy smoke/QA trên deploy thực tế và xử lý lỗi nếu có.
-2. Gom dependency `../IMG/...` vào repo hoặc thêm fallback local để trang đứng độc lập hơn.
-3. Đưa audio binary cần thiết vào repo khi có luồng upload binary phù hợp.
-4. Nếu muốn offline 100%, tải các Twemoji SVG thực sự đang dùng về local thay CDN.
-5. Accessibility: focus trap dashboard, trả focus về nút mở, aria trạng thái, keyboard-only.
-6. Audit `localStorage`/backup khi profile lớn; tránh normalize/save quá nhiều dữ liệu không đổi.
-7. Dọn các branch thử Phase 2 nếu không còn cần.
-8. Sau khi ổn định mới cân nhắc feature mới thay vì tiếp tục chồng wrapper.
+1. **Storage audit:** đo/giảm write `localStorage`, nhất là profile lớn và study timer; chỉ tối ưu nếu không đổi schema/behavior.
+2. **Asset reliability:** giảm phụ thuộc `../IMG/...`; thêm fallback an toàn trước khi di chuyển asset thật.
+3. **Offline visual:** nếu cần offline 100%, chỉ kéo các Twemoji SVG thực sự đang dùng về repo thay vì toàn bộ bộ icon.
+4. **Audio binary:** đưa các file âm thanh cần thiết vào repo khi connector có luồng binary phù hợp hoặc người dùng upload file.
+5. Chạy smoke + QA trên deploy thực tế nếu có URL deploy.
+6. Dọn các branch thử Phase 2 nếu không còn cần.
+7. Chỉ sau khi ổn định mới mở roadmap feature mới, tránh tiếp tục chồng wrapper.
 
 ## 6. Tồn đọng
 
