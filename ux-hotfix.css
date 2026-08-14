@@ -1,0 +1,96 @@
+/* ===== VER2 HOTFIX - GỌN BÁO LỖI + GIỌNG VIỆT ===== */
+#result.incorrect.has-diff{
+    width:min(100%,760px);
+    padding:16px 18px;
+    border-radius:16px;
+    background:#fff3bf;
+    color:#1f2937;
+    box-shadow:0 0 0 2px rgba(201,168,79,.55),0 10px 24px rgba(0,0,0,.12);
+}
+
+.typing-diff-clean{
+    gap:12px;
+}
+
+.typing-diff-clean .typing-diff-title{
+    font-size:clamp(20px,2.6vw,28px);
+    color:#671b1b;
+}
+
+.typing-diff-clean .typing-diff-line{
+    grid-template-columns:92px minmax(0,1fr);
+    gap:12px;
+    align-items:baseline;
+}
+
+.typing-diff-clean .typing-diff-label{
+    font-size:16px;
+    color:#43546f;
+}
+
+.typing-diff-clean .typing-diff-value{
+    font-size:clamp(24px,3.6vw,34px);
+    line-height:1.5;
+    letter-spacing:.01em;
+    word-break:normal;
+    overflow-wrap:anywhere;
+}
+
+.typing-diff-run{
+    display:inline;
+    border-radius:6px;
+    padding:0 1px;
+}
+
+.typing-diff-run.wrong{
+    color:#b42318;
+    background:rgba(255,77,109,.14);
+    box-shadow:inset 0 -3px 0 rgba(180,35,24,.42);
+}
+
+.typing-diff-empty{
+    color:#9a3412;
+    font-size:.72em;
+    font-weight:700;
+    opacity:.8;
+}
+
+/* Vô hiệu hóa kiểu ô đỏ từng ký tự cũ nếu DOM cũ còn xuất hiện trong lúc chuyển trạng thái. */
+.typing-diff-clean .typing-diff-char.wrong,
+.typing-diff-clean .typing-diff-char.missing{
+    display:inline;
+    min-width:0;
+    padding:0 1px;
+    margin:0;
+    background:rgba(255,77,109,.14);
+    color:#b42318;
+    box-shadow:inset 0 -3px 0 rgba(180,35,24,.42);
+}
+
+.vi-voice-setting{
+    display:grid;
+    gap:8px;
+    margin-top:4px;
+}
+
+.vi-voice-hint{
+    font-size:13px;
+    line-height:1.45;
+    color:#cfe5f8;
+}
+
+@media (max-width:600px){
+    #result.incorrect.has-diff{
+        width:100%;
+        padding:14px;
+    }
+
+    .typing-diff-clean .typing-diff-line{
+        grid-template-columns:1fr;
+        gap:3px;
+    }
+
+    .typing-diff-clean .typing-diff-value{
+        font-size:22px;
+    }
+}
