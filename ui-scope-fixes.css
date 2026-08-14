@@ -13,7 +13,7 @@
     display:none !important;
 }
 
-/* Giữ các thanh học gọn và cùng nhịp, tránh cảm giác từng khối rời rạc. */
+/* Giữ các thanh học cùng chiều rộng và nhịp spacing. */
 #topicLevelBar,
 #memoryModeBar,
 #listenModeBar,
@@ -28,6 +28,42 @@
 #topicLevelBar,
 #memoryModeBar{
     border-radius:12px;
+}
+
+/* Easy mặc định chỉ cần thấy nút bật tính năng; option chi tiết mở khi active. */
+#listenModeBar:not(.active){
+    justify-content:flex-start;
+    min-height:0;
+    margin-top:4px;
+    margin-bottom:6px;
+}
+
+#listenModeBar:not(.active) #listenReplayBtn,
+#listenModeBar:not(.active) #listenModeStatus{
+    display:none !important;
+}
+
+#memoryModeBar:not(.active){
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+    padding:0;
+    margin-top:4px;
+    margin-bottom:8px;
+    border:0;
+    background:transparent;
+    box-shadow:none;
+}
+
+#memoryModeBar:not(.active) .memory-mode-field,
+#memoryModeBar:not(.active) .memory-mode-status{
+    display:none !important;
+}
+
+#memoryModeBar:not(.active) .memory-mode-btn{
+    min-height:40px;
+    padding:8px 14px;
+    font-size:15px;
 }
 
 #listenModeBar{
@@ -59,7 +95,7 @@
 /* Landscape thấp: ưu tiên prompt + input, giảm chiều cao control phụ. */
 @media (max-height:600px) and (orientation:landscape){
     #topicLevelBar,
-    #memoryModeBar{
+    #memoryModeBar.active{
         margin-top:4px;
         margin-bottom:6px;
         padding-top:6px;
@@ -94,6 +130,11 @@
         width:100%;
     }
 
+    #listenModeBar:not(.active),
+    #memoryModeBar:not(.active){
+        display:flex;
+    }
+
     .listen-mode-status,
     .memory-mode-status,
     .topic-level-status{
@@ -103,7 +144,7 @@
 
 @media (max-width:420px){
     #topicLevelBar,
-    #memoryModeBar{
+    #memoryModeBar.active{
         padding:8px;
     }
 
