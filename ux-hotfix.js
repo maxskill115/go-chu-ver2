@@ -1,5 +1,6 @@
 /* ===== VER2 HOTFIX - GỌN BÁO LỖI + CHỈ DÙNG GIỌNG VIỆT ===== */
 const GO_CHU_VI_VOICE_KEY = "goChuVer2.viVoice.v1";
+let goChuVoiceSettingInitialized = false;
 
 function createDiffRun(text, wrong){
     const span = document.createElement("span");
@@ -38,7 +39,6 @@ function appendDiffRuns(valueEl, alignment, key){
     }
 }
 
-/* Giữ thuật toán Levenshtein Phase 1, chỉ thay cách trình bày. */
 showTypingDiff = function(expectedText, typedText){
     const alignment = buildTypingDiffAlignment(expectedText, typedText);
 
@@ -94,7 +94,6 @@ function saveVoiceURI(uri){
     } catch (error) {}
 }
 
-/* Không fallback sang voice mặc định khác ngôn ngữ. */
 refreshVietnameseVoice = function(){
     if(!speechSupported()) return null;
     const voices = getVietnameseVoices();
@@ -128,6 +127,7 @@ function ensureVietnameseVoiceSetting(){
     const hint = document.getElementById("viVoiceHint");
     if(!select || !hint) return;
 
+    if(typeof ensureListenVoiceRuntime === "function") ensureListenVoiceRuntime();
     const voices = getVietnameseVoices();
     const chosen = refreshVietnameseVoice();
     select.innerHTML = "";
@@ -160,6 +160,7 @@ function ensureVietnameseVoiceSetting(){
         });
         select.dataset.bound = "1";
     }
+    goChuVoiceSettingInitialized = true;
 }
 
 const baseUpdateListenModeBarHotfix = updateListenModeBar;
@@ -169,20 +170,24 @@ updateListenModeBar = function(){
     const toggle = document.getElementById("listenModeToggle");
     const replay = document.getElementById("listenReplayBtn");
     const status = document.getElementById("listenModeStatus");
-    const voice = refreshVietnameseVoice();
     const isEasy = currentMode === "easy";
 
-    if(toggle && speechSupported()){
-        toggle.disabled = !voice && !listenModeActive;
-        if(!voice && !listenModeActive) toggle.textContent = "🎧 Chưa có giọng Việt";
+    /* Không enumerate voice ở mỗi showText khi Listen đang tắt. */
+    const voice = listenModeActive
+        ? (typeof ensureListenVoiceRuntime === "function" ? ensureListenVoiceRuntime() : refreshVietnameseVoice())
+        : vietnameseVoice;
+
+    if(toggle && speechSupported() && isEasy){
+        toggle.disabled = false;
+        if(!listenModeActive) toggle.textContent = "🎧 Nghe rồi gõ";
     }
 
     if(replay) replay.disabled = !voice || !listenModeActive || !isEasy;
 
     if(status && speechSupported()){
-        if(!voice){
+        if(listenModeActive && !voice){
             status.textContent = "Thiết bị chưa có giọng tiếng Việt";
-        }else if(listenModeActive && isEasy){
+        }else if(listenModeActive && isEasy && voice){
             status.textContent = `Giọng: ${voice.name}`;
         }
     }
@@ -190,13 +195,16 @@ updateListenModeBar = function(){
 
 const baseSetListenModeHotfix = setListenMode;
 setListenMode = function(active){
-    if(active && !refreshVietnameseVoice()){
-        ensureVietnameseVoiceSetting();
-        updateListenModeBar();
-        if(typeof showCenterToast === "function"){
-            showCenterToast("Chưa có giọng tiếng Việt trên thiết bị", "incorrect");
+    if(active){
+        if(typeof ensureListenVoiceRuntime === "function") ensureListenVoiceRuntime();
+        if(!refreshVietnameseVoice()){
+            ensureVietnameseVoiceSetting();
+            updateListenModeBar();
+            if(typeof showCenterToast === "function"){
+                showCenterToast("Chưa có giọng tiếng Việt trên thiết bị", "incorrect");
+            }
+            return;
         }
-        return;
     }
     return baseSetListenModeHotfix(active);
 };
@@ -206,6 +214,7 @@ speakPrompt = function(text = currentPrompt){
 
     clearTimeout(listenSpeechTimer);
     window.speechSynthesis.cancel();
+    if(typeof ensureListenVoiceRuntime === "function") ensureListenVoiceRuntime();
     const voice = refreshVietnameseVoice();
     if(!voice){
         updateListenModeBar();
@@ -225,12 +234,17 @@ speakPrompt = function(text = currentPrompt){
 
 function refreshVoiceHotfixUI(){
     ensureVietnameseVoiceSetting();
-    refreshVietnameseVoice();
     updateListenModeBar();
 }
 
-if(speechSupported()){
-    window.speechSynthesis.addEventListener?.("voiceschanged", refreshVoiceHotfixUI);
+/* Voice setting chỉ được dựng khi người dùng thật sự mở Settings. */
+if(settingsToggleBtn){
+    settingsToggleBtn.addEventListener("click", () => {
+        setTimeout(() => {
+            if(!settingsPanel.classList.contains("hidden")) refreshVoiceHotfixUI();
+        }, 0);
+    });
 }
 
-refreshVoiceHotfixUI();
+window.ensureVietnameseVoiceSetting = ensureVietnameseVoiceSetting;
+window.refreshVoiceHotfixUI = refreshVoiceHotfixUI;
