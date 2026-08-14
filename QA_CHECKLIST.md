@@ -34,15 +34,29 @@ Checklist này dùng sau mỗi phase lớn hoặc trước khi deploy bản mớ
 - [ ] Mất mạng/SVG lỗi → fallback emoji.
 - [ ] Hình không đẩy input ra khỏi viewport mobile landscape thấp.
 
-## 5. Nghe rồi gõ
+## 5. Nghe rồi gõ / Google TTS MP3
 
-- [ ] Chỉ bật khi thiết bị có voice `vi-*`.
-- [ ] Không fallback sang voice ngoại ngữ.
-- [ ] Bật Listen → chữ ẩn, hình vẫn hiện.
-- [ ] Prompt mới tự đọc.
-- [ ] Nghe lại không chồng speech queue.
-- [ ] Đổi voice trong Settings có hiệu lực.
+### Khi manifest còn rỗng
+
+- [ ] Web vẫn chạy bằng Web Speech tiếng Việt như Phase 4/hotfix.
+- [ ] Chỉ dùng voice `vi-*`; không fallback sang voice ngoại ngữ.
+
+### Khi đã render MP3
+
+- [ ] Prompt có mapping MP3 → ưu tiên phát `Audio/tts/*.mp3`, không phát Web Speech đồng thời.
+- [ ] Status hiển thị `MP3 Google TTS` và voice từ manifest.
+- [ ] Prompt thiếu MP3 → fallback đúng sang Web Speech voice Việt nếu máy có.
+- [ ] Prompt thiếu MP3 + máy không có voice Việt → báo rõ, không đọc sai ngôn ngữ.
+- [ ] File MP3 404/lỗi → chỉ đánh dấu missing trong session và fallback, không crash.
+- [ ] `NotAllowedError` do autoplay không bị ghi nhầm thành file missing.
+- [ ] `Nghe lại` dừng audio cũ rồi phát lại từ đầu, không chồng 2 nguồn.
+- [ ] Prompt mới tự dừng prompt cũ rồi đọc prompt mới.
+- [ ] Rời mode Đơn giản → MP3 local dừng ngay.
+- [ ] Bật Memory → Listen tắt và MP3 local dừng.
+- [ ] Thanh âm lượng và `Giảm âm thanh` thay đổi volume MP3 TTS đang phát.
+- [ ] Settings ghi rõ Web Speech voice chỉ là dự phòng khi có MP3 local.
 - [ ] Telex/VNI guide tự ẩn để không lộ đáp án.
+- [ ] `getGoChuTtsHealth()` chạy không lỗi và `manifestCount` khớp `GO_CHU_TTS_META.count`.
 
 ## 6. Nhớ rồi gõ
 
@@ -149,7 +163,21 @@ Checklist này dùng sau mỗi phase lớn hoặc trước khi deploy bản mớ
 - [ ] Audio thiếu không làm crash logic đúng/sai.
 - [ ] Không sửa các link navigation `../main.html`, `../toán chơi.html`, ... trong đợt asset.
 
-## 15. Mobile
+## 15. Google TTS renderer — build-time
+
+- [ ] `py tools\render_google_tts.py --dry-run` đọc được toàn bộ `easyWords`, không cần credential.
+- [ ] Prompt trùng được loại khỏi batch.
+- [ ] Tên MP3 là SHA-1 rút gọn, ổn định giữa các lần chạy.
+- [ ] `--limit 10` chỉ gọi API cho 10 câu nhưng manifest vẫn giữ mọi MP3 cũ đang tồn tại.
+- [ ] `--only "con mèo"` không làm mất các entry cũ trong manifest.
+- [ ] File có sẵn được SKIP khi không có `--force`.
+- [ ] `--force` render đè đúng tập đang chọn.
+- [ ] `--sample` chỉ tạo `_sample.mp3`, không đưa sample vào manifest.
+- [ ] `tts-manifest.js` không chứa credential/API key.
+- [ ] `GO_CHU_TTS_META.count` bằng số entry manifest.
+- [ ] Sau khi thêm prompt mới vào `data-easy.js`, chạy renderer lại chỉ tạo prompt mới nếu file cũ còn nguyên.
+
+## 16. Mobile
 
 Kiểm tra tối thiểu:
 
@@ -162,7 +190,7 @@ Kiểm tra tối thiểu:
 - [ ] Focus outline không bị cắt khỏi viewport/modal.
 - [ ] Emoji fallback không làm mode button/title nhảy chiều cao lớn.
 
-## 16. Smoke test dev
+## 17. Smoke test dev
 
 Mở URL với `?debug=1`, ví dụ:
 
