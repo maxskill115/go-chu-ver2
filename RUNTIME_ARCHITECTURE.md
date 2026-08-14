@@ -8,6 +8,7 @@ Tài liệu này ghi **thứ tự nạp module và chuỗi wrapper runtime** đ�
 - Module mới không được ghi Hard/Free vào `promptStats` của Easy.
 - Nếu cần bọc `showText`, `setMode`, `checkNext`, `setListenMode`, `setMemoryMode`, phải lưu base function trước rồi gọi base đúng một lần.
 - Module cần hàm được khai báo trong `script.js` (ví dụ `submitFreeAnswer`, `setFreeTarget`) phải nạp **sau `script.js`**.
+- Module storage chỉ được thay cách persistence tương đương, không đổi schema/cadence học.
 - Module accessibility không được bọc logic học; chỉ quan sát DOM/trạng thái UI.
 - Debug/smoke-test nạp cuối cùng và không thay đổi hành vi học.
 
@@ -29,8 +30,9 @@ Tài liệu này ghi **thứ tự nạp module và chuỗi wrapper runtime** đ�
 14. `vietnamese-dashboard.js`
 15. `script.js`
 16. `mode-stats.js`
-17. `accessibility.js`
-18. `debug-smoke.js`
+17. `storage-health.js`
+18. `accessibility.js`
+19. `debug-smoke.js`
 
 ## Chuỗi chức năng chính
 
@@ -88,6 +90,7 @@ Invariant bắt buộc: **Listen và Memory không được active cùng lúc**.
 - `profile-stats.js` route `promptStats`, topic/level, Memory settings và study time vào profile active.
 - `vietnamese-dashboard.js` chỉ mở rộng dashboard với `accentErrors`.
 - `mode-stats.js` mở rộng schema profile bằng `modeStats.hard/free`; không sửa `promptStats`.
+- `storage-health.js` nạp sau `mode-stats.js`, vì serialization phải đi qua **final `normalizeProfileData`** đã biết `modeStats`.
 
 ## Hard / Free stats
 
@@ -97,6 +100,32 @@ Invariant bắt buộc: **Listen và Memory không được active cùng lúc**.
 - Free: sai nhiều lần cùng target chỉ tính tối đa **1 sai**; hoàn thành đúng tính **1 đúng**.
 - Hard/Free không tham gia `getPromptWeakness`, Smart Review, topic Auto level hay adaptive Easy.
 - Dashboard tổng quan cộng Easy + Hard + Free; phần **Cần ôn** và **Lỗi dấu** vẫn là dữ liệu Easy.
+
+## Storage health layer
+
+`storage-health.js` chỉ thay implementation persistence của:
+
+- `saveProfileData(profileId, data)`;
+- `saveProfilesRegistry()`.
+
+Behavior dữ liệu giữ nguyên, nhưng trước `localStorage.setItem` sẽ so sánh serialized value hiện có:
+
+- giống hệt → skip write;
+- khác → write bình thường.
+
+Quy tắc an toàn:
+
+- vẫn gọi final `normalizeProfileData`, nên `promptStats`, `modeStats`, study và preferences không mất field;
+- không cache quyết định write trong memory — luôn đọc current `localStorage` trước khi skip, nên import/reset/remove key không bị stale cache;
+- không thay cadence study timer 15 giây;
+- không debounce prompt result save;
+- không đổi key/schema/version.
+
+Debug helpers:
+
+- `getGoChuStorageHealth()` — trả số key, profile, dung lượng UTF-8 ước tính và top key lớn nhất;
+- `printGoChuStorageHealth()` — in report ra Console;
+- `goChuStorageMetrics` — đếm writes/skips/errors kể từ khi module load.
 
 ## Accessibility layer
 
@@ -123,4 +152,5 @@ Trước khi merge:
 5. Chạy `runGoChuSmokeTests()`.
 6. Test Easy / Hard / Free / Listen / Memory / chuyển profile.
 7. Test keyboard-only: Tab/Shift+Tab/Escape ở dashboard + game selector.
-8. Cập nhật tài liệu này và `HANDOFF.md` nếu chuỗi wrapper thay đổi.
+8. Với storage: test export/import/reset profile và no-op write skip.
+9. Cập nhật tài liệu này và `HANDOFF.md` nếu chuỗi wrapper thay đổi.

@@ -124,7 +124,20 @@ Checklist này dùng sau mỗi phase lớn hoặc trước khi deploy bản mớ
 - [ ] Escape vẫn đóng được dashboard / game selector.
 - [ ] `prefers-reduced-motion: reduce` làm animation/transition gần như tắt.
 
-## 13. Mobile
+## 13. Storage / backup
+
+- [ ] `getGoChuStorageHealth()` chạy không lỗi và trả `totalKB`, `largestKeys`, metrics.
+- [ ] Gọi `saveProfileData(activeProfileId, activeProfileData)` hai lần liên tiếp → lần sau được tính vào `profileWriteSkips`.
+- [ ] Gọi `saveProfilesRegistry()` khi registry không đổi → tăng `registryWriteSkips`.
+- [ ] Gõ đúng/sai vẫn ghi stats ngay, không bị dedupe nhầm.
+- [ ] Study time vẫn flush khoảng 15 giây như trước; không đổi cadence.
+- [ ] Đổi topic/level/Memory rồi reload → preferences còn đúng.
+- [ ] Chuyển hồ sơ rồi reload → active profile đúng.
+- [ ] Reset hồ sơ xong dữ liệu thực sự rỗng, không bị stale cache phục hồi lại.
+- [ ] Export → reset/import → `promptStats`, `modeStats`, study và preferences phục hồi đủ.
+- [ ] `goChuStorageMetrics.writeErrors` giữ 0 trong sử dụng bình thường.
+
+## 14. Mobile
 
 Kiểm tra tối thiểu:
 
@@ -136,7 +149,7 @@ Kiểm tra tối thiểu:
 - [ ] Các nút chính có vùng bấm đủ lớn.
 - [ ] Focus outline không bị cắt khỏi viewport/modal.
 
-## 14. Smoke test dev
+## 15. Smoke test dev
 
 Mở URL với `?debug=1`, ví dụ:
 
