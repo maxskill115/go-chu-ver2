@@ -2,7 +2,7 @@
 
 ## 1. Mục tiêu dự án
 
-`go-chu-ver2` là web HTML/CSS/JS thuần để bé luyện **đọc → gõ → sửa lỗi → ôn lại → nghe → nhớ**.
+`go-chu-ver2` là web HTML/CSS/JS thuần để bé luyện **đọc → gõ → sửa lỗi → ôn lại → nghe → nhớ**, có chủ đề và độ khó thích nghi.
 
 Nguyên tắc bắt buộc:
 
@@ -62,35 +62,35 @@ Tồn đọng baseline:
 - [x] Chỉ dùng voice tiếng Việt (`vi-*`), không fallback sang giọng sai ngôn ngữ.
 - [x] Có lựa chọn **Giọng đọc tiếng Việt** trong cài đặt nếu thiết bị có nhiều voice.
 - [x] Nếu thiết bị chưa có voice Việt: không đọc, báo rõ cho phụ huynh.
-- [x] Nút **Nghe rồi gõ / Hiện chữ**.
-- [x] Nút **Nghe lại**.
-- [x] Khi bật: ẩn chữ, giữ hình minh họa.
-- [x] Mỗi prompt mới tự đọc.
-- [x] Hủy speech queue cũ trước khi đọc mới.
+- [x] Nút **Nghe rồi gõ / Hiện chữ** và **Nghe lại**.
 - [x] Dùng chung random thông minh + lưu lỗi.
-- [x] Responsive mobile.
 
 ### Phase 5 — Đọc, nhớ, rồi gõ
 - [x] Có chế độ phụ **Nhớ rồi gõ** trong Đơn giản.
 - [x] Hiện prompt vài giây rồi tự ẩn.
 - [x] Chỉ mở ô gõ sau khi hết thời gian ghi nhớ.
-- [x] Mức 1 / 2 / 3 tương ứng đúng 2 / 3 / 4 từ.
-- [x] Phụ huynh chọn 3 / 5 / 7 giây.
-- [x] Giữ hình minh họa khi chữ đã bị che.
-- [x] Dùng chung Phase 1 báo lỗi và Phase 2 lưu prompt yếu.
-- [x] Nhớ rồi gõ và Nghe rồi gõ loại trừ nhau.
-- [x] Responsive mobile/landscape thấp.
+- [x] Mức 2 / 3 / 4 từ; thời gian 3 / 5 / 7 giây.
+- [x] Giữ hình minh họa khi chữ bị che.
+- [x] Dùng chung Phase 1 + Phase 2.
+- [x] Loại trừ với Nghe rồi gõ.
 
 ### Phase 6 — Chủ đề và cấp độ
-- [ ] Động vật / Gia đình / Đồ ăn / Thiên nhiên / Trường học / Đồ vật / Cơ thể / Màu sắc / Cảm xúc.
-- [ ] Tất cả chủ đề.
-- [ ] Chủ đề áp dụng được cho học thường, Nghe rồi gõ và Nhớ rồi gõ.
-- [ ] Tự tăng độ khó theo kết quả học.
+- [x] Có **Tất cả / Động vật / Gia đình / Đồ ăn / Thiên nhiên / Trường học / Đồ vật / Cơ thể / Màu sắc / Cảm xúc**.
+- [x] Metadata chủ đề tách riêng, không đổi cấu trúc `easyWords`.
+- [x] Chủ đề áp dụng cho học thường, Nghe rồi gõ và Nhớ rồi gõ.
+- [x] Ôn lỗi chỉ lấy prompt thuộc filter chủ đề/cấp độ hiện tại.
+- [x] Cấp độ **Auto / 1 / 2 / 3 / 4 từ**.
+- [x] Auto tăng/giảm dựa trên số lượt + độ chính xác, không tăng quá nhanh.
+- [x] Phụ huynh có thể khóa mức.
+- [x] Lưu chủ đề/cấp độ bằng `localStorage`.
+- [x] Responsive mobile.
 
 ### Phase 7 — Thống kê và hồ sơ bé
 - [ ] Tổng câu, đúng/sai, tỷ lệ chính xác, thời gian học.
 - [ ] Danh sách prompt hay sai.
+- [ ] Thống kê theo chủ đề.
 - [ ] Hồ sơ riêng từng bé.
+- [ ] Chuyển hồ sơ không làm mất dữ liệu bé khác.
 
 ### Phase 8 — Hỗ trợ tiếng Việt và bàn phím
 - [ ] Highlight từng từ khi đọc.
@@ -101,91 +101,83 @@ Tồn đọng baseline:
 ## 4. Nhật ký
 
 ### 2026-08-14 — Khởi tạo
-
 - Tạo repo `go-chu-ver2`.
 - GitHub App ban đầu bị 403 do thiếu quyền Contents; người dùng cấp lại quyền và ghi thành công.
 - Baseline được tách thành các file dữ liệu/logic/CSS dễ bảo trì hơn.
 - Quy ước HANDOFF bắt buộc được áp dụng.
 
 ### 2026-08-14 — Phase 1
-
-- Dùng Levenshtein để căn chỉnh `Cần gõ` / `Bé gõ`.
-- Sai/thừa/thiếu được chỉ rõ theo vị trí.
+- Dùng Levenshtein căn chỉnh `Cần gõ` / `Bé gõ`.
 - PR #1 squash merge, commit `1e8450b`.
 
 ### 2026-08-14 — Phase 2
-
 - Tạo `smart-review.js`, `smart-review.css`.
-- Key lưu: `goChuVer2.promptStats.v1`.
-- Mỗi prompt lưu `correct`, `wrong`, `lastCorrectAt`, `lastWrongAt`.
+- Key lưu prompt stats: `goChuVer2.promptStats.v1`.
 - Một lượt prompt chỉ ghi tối đa 1 lần sai dù bé thử sai nhiều lần.
 - Điểm yếu: `wrong * 2 - correct`.
-- Chèn thêm tối đa 24 prompt yếu vào vòng học, giữ khoảng cách an toàn.
-- Ôn tối đa 20 prompt yếu/lượt.
 - PR #2 squash merge, commit `11b5689`.
-- Có 2 branch thử không dùng: `agent/phase2-smart-review`, `agent/phase2-smart-review-2`.
 
 ### 2026-08-14 — Phase 3
-
 - Tạo `visual-data.js`, `visual-prompt.js`, `visual-prompt.css`.
-- Mapping hơn 30 nhóm: động vật, trái cây, đồ vật, thiên nhiên.
-- Chỉ áp dụng mode Đơn giản.
-- Asset: Twemoji SVG, ghim `jdecked/twemoji@17.0.3` trên jsDelivr.
-- Fallback emoji nếu SVG lỗi/mất mạng.
-- Thêm `THIRD_PARTY.md` attribution CC BY 4.0.
+- Mapping hơn 30 nhóm; Twemoji ghim `jdecked/twemoji@17.0.3`.
 - PR #3 squash merge, commit `e0fe068`.
 
 ### 2026-08-14 — Phase 4
-
 - Tạo `listen-mode.js`, `listen-mode.css`.
-- Dùng `window.speechSynthesis` + `SpeechSynthesisUtterance`.
-- Thêm nút **🎧 Nghe rồi gõ**, **🔊 Nghe lại**.
-- Random thông minh, ghi lỗi và Ôn lại tiếp tục hoạt động.
 - PR #4 squash merge, commit `6cc6b00`.
 
 ### 2026-08-14 — Hotfix UX: báo lỗi + giọng đọc tiếng Việt
-
-- Bỏ kiểu mỗi ký tự là một ô đỏ; chỉ tô nhẹ phần sai/thiếu.
-- Không còn hiển thị `SP`; dấu cách giữ như khoảng trắng thật.
-- Dòng Bé gõ không còn tạo placeholder cho toàn bộ phần chưa nhập.
-- Voice chỉ chấp nhận `lang` bắt đầu bằng `vi`; không fallback giọng sai ngôn ngữ.
-- Thêm chọn **Giọng đọc tiếng Việt** trong Settings, key `goChuVer2.viVoice.v1`.
-- Nếu không có voice Việt, web không đọc và báo rõ.
-- Tốc độ đọc mặc định giảm còn `0.76`.
+- Bỏ kiểu ô đỏ dày đặc và `SP`.
+- Voice chỉ dùng `vi-*`, có select voice Việt trong Settings.
+- Key voice: `goChuVer2.viVoice.v1`.
 - PR #5 squash merge, commit `26cdb63`.
 
 ### 2026-08-14 — Phase 5: Nhớ rồi gõ
-
 - Tạo `memory-mode.js`, `memory-mode.css`.
-- Thêm thanh **🧠 Nhớ rồi gõ** trong mode Đơn giản.
-- Lọc `easyWords` theo số từ chính xác: 2 / 3 / 4 từ.
-- Lưu lựa chọn bằng `goChuVer2.memoryWords.v1` và `goChuVer2.memorySeconds.v1`.
-- Khi prompt mới xuất hiện: chữ hiện trong 3 / 5 / 7 giây; input và nút Tiếp theo bị khóa trong thời gian nhìn.
-- Hết thời gian: chữ đổi thành `🧠 Nhớ lại rồi gõ`, input được mở và tự focus.
-- Hình Phase 3 không bị ẩn nên vẫn đóng vai trò gợi ý ngữ cảnh.
-- Prompt yếu của Phase 2 vẫn được chèn thêm vào vòng Memory nếu cùng mức số từ.
-- Kết quả đúng/sai của Memory tiếp tục ghi vào thống kê prompt Phase 2.
-- Khi bật Memory, chế độ Nghe rồi gõ tự tắt; nếu bật Nghe rồi gõ thì Memory tự tắt.
-- Khi Memory bật, thanh Ôn lại được ẩn để tránh hai luồng bài tập chồng nhau; weighting prompt yếu vẫn hoạt động tự động.
-- Responsive: mobile chuyển controls thành 2 cột; landscape thấp giảm chiều cao control.
-- Phạm vi Phase 5: `memory-mode.js`, `memory-mode.css`, `styles.css`, `index.html`, `HANDOFF.md`.
+- Key: `goChuVer2.memoryWords.v1`, `goChuVer2.memorySeconds.v1`.
+- Prompt 2/3/4 từ; thời gian 3/5/7 giây.
+- Phase 5 PR #6 squash merge, commit `daecd42`.
 
-## 5. Kế hoạch Phase 6 — Chủ đề và cấp độ
+### 2026-08-14 — Phase 6: Chủ đề và cấp độ
 
-Mục tiêu: cho bé chọn nhóm nội dung quen thuộc và bắt đầu cá nhân hóa độ khó.
+- Tạo `topic-data.js`, `topic-level.js`, `topic-level.css`.
+- Chủ đề dùng keyword/phrase mapping; một prompt có thể thuộc nhiều chủ đề nếu nội dung phù hợp.
+- `Tất cả` luôn chứa toàn bộ `easyWords`, kể cả prompt chưa phân loại được.
+- Rule đã tránh một số collision rõ ràng: `mặt trời` không bị kéo vào Cơ thể chỉ vì từ `mặt`; `màu cam` không bị coi là Đồ ăn chỉ vì `cam`.
+- Key chủ đề: `goChuVer2.topic.v1`.
+- Key cấp độ: `goChuVer2.level.v1`.
+- Cấp độ khóa: chính xác 1 / 2 / 3 / 4 từ.
+- Auto mặc định bắt đầu ở 2 từ.
+- Auto xuống 1 từ nếu đã có ít nhất 8 lượt và độ chính xác dưới 65%.
+- Auto lên 3 từ nếu có ít nhất 15 lượt và độ chính xác từ 88%.
+- Auto lên 4 từ nếu có ít nhất 40 lượt và độ chính xác từ 92%.
+- Auto chỉ áp mức mới khi build vòng học mới; không đổi prompt đột ngột giữa vòng.
+- Nếu topic không có dữ liệu ở mức Auto mục tiêu, chọn mức gần nhất có dữ liệu.
+- Nếu level khóa đã lưu nhưng topic mới không có mức đó, tự trả về Auto thay vì tạo danh sách rỗng.
+- Khi phụ huynh chọn level khóa không có dữ liệu, giữ level cũ và báo nhẹ.
+- `buildSmartEasyRound` được filter theo topic + level; weighting prompt yếu vẫn giữ.
+- `getWeakPromptRecords` được filter theo topic/level trong học thường; khi Memory active thì level riêng của Memory được ưu tiên nhưng topic vẫn giữ.
+- `buildMemoryRound` được filter topic, nên Nhớ rồi gõ dùng đúng chủ đề.
+- Nghe rồi gõ dùng cùng `texts` đã filter nên tự kế thừa topic/cấp độ.
+- UI dùng 2 select gọn: **Chủ đề** + **Cấp độ**, có status số nội dung; mobile 2 cột, màn hình rất nhỏ 1 cột.
+- Phạm vi Phase 6: `topic-data.js`, `topic-level.js`, `topic-level.css`, `styles.css`, `index.html`, `HANDOFF.md`.
+
+## 5. Kế hoạch Phase 7 — Thống kê và hồ sơ bé
+
+Mục tiêu: phụ huynh nhìn được tiến độ, đồng thời tách dữ liệu cho từng bé trên cùng thiết bị.
 
 Plan:
 
-1. Tách metadata chủ đề ra file riêng, không thay toàn bộ `easyWords` thành object ngay lập tức.
-2. Chủ đề đầu tiên: **Tất cả / Động vật / Gia đình / Đồ ăn / Thiên nhiên / Trường học / Đồ vật / Cơ thể / Màu sắc / Cảm xúc**.
-3. Dùng keyword/mapping rõ ràng; prompt không phân loại được vẫn nằm trong **Tất cả**.
-4. Khi chọn chủ đề, random thông minh chỉ random trong pool chủ đề đó.
-5. Ôn lỗi chỉ lấy prompt thuộc chủ đề đang chọn khi đang học theo chủ đề; thống kê gốc vẫn giữ chung.
-6. Nghe rồi gõ và Nhớ rồi gõ tiếp tục dùng cùng filter chủ đề.
-7. Thêm cấp độ tự động ban đầu dựa trên số từ + tỷ lệ đúng, nhưng không tự tăng quá nhanh.
-8. Cho phụ huynh có thể khóa một mức thay vì để Auto.
-9. Lưu chủ đề/cấp độ bằng `localStorage`.
-10. UI chủ đề phải gọn trên mobile, ưu tiên select/dropdown thay vì 9 nút lớn.
+1. Tạo hồ sơ mặc định **Bé 1** và cho phép thêm/đổi tên/xóa hồ sơ (không cho xóa hồ sơ cuối cùng).
+2. Mỗi hồ sơ có namespace `localStorage` riêng cho prompt stats, thời gian, topic/level và các cài đặt học liên quan.
+3. Khi chuyển bé: lưu trạng thái bé hiện tại → nạp trạng thái bé mới → refresh UI/pool mà không reload trang nếu có thể.
+4. Dashboard phụ huynh hiển thị: tổng lượt, đúng, sai, accuracy, thời gian học hôm nay/tổng, số prompt cần ôn.
+5. Hiển thị Top prompt hay sai (ví dụ top 10).
+6. Thống kê theo chủ đề: số lượt + accuracy từng topic.
+7. Không tạo leaderboard/áp lực điểm số cho bé; dashboard ưu tiên phụ huynh.
+8. Có nút reset thống kê của **hồ sơ hiện tại** với xác nhận rõ; không xóa dữ liệu bé khác.
+9. Có export/import JSON local để backup tiến độ trước khi có backend.
+10. UI dashboard có thể mở/đóng, không chiếm chỗ màn học bình thường.
 11. Cập nhật HANDOFF trong cùng PR.
 
 ## 6. Việc còn tồn đọng
