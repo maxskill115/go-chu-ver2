@@ -2,7 +2,7 @@
 
 ## 1. Mục tiêu dự án
 
-`go-chu-ver2` là web HTML/CSS/JS thuần để bé luyện **đọc → gõ → sửa lỗi → ôn lại → nghe/nhớ**.
+`go-chu-ver2` là web HTML/CSS/JS thuần để bé luyện **đọc → gõ → sửa lỗi → ôn lại → nghe → nhớ**.
 
 Nguyên tắc bắt buộc:
 
@@ -71,16 +71,21 @@ Tồn đọng baseline:
 - [x] Responsive mobile.
 
 ### Phase 5 — Đọc, nhớ, rồi gõ
-- [ ] Hiện prompt trong vài giây.
-- [ ] Tự ẩn prompt.
-- [ ] Bé gõ lại theo trí nhớ.
-- [ ] Chia mức 2 / 3 / 4 từ.
-- [ ] Cho phép chỉnh thời gian ghi nhớ.
+- [x] Có chế độ phụ **Nhớ rồi gõ** trong Đơn giản.
+- [x] Hiện prompt vài giây rồi tự ẩn.
+- [x] Chỉ mở ô gõ sau khi hết thời gian ghi nhớ.
+- [x] Mức 1 / 2 / 3 tương ứng đúng 2 / 3 / 4 từ.
+- [x] Phụ huynh chọn 3 / 5 / 7 giây.
+- [x] Giữ hình minh họa khi chữ đã bị che.
+- [x] Dùng chung Phase 1 báo lỗi và Phase 2 lưu prompt yếu.
+- [x] Nhớ rồi gõ và Nghe rồi gõ loại trừ nhau.
+- [x] Responsive mobile/landscape thấp.
 
 ### Phase 6 — Chủ đề và cấp độ
 - [ ] Động vật / Gia đình / Đồ ăn / Thiên nhiên / Trường học / Đồ vật / Cơ thể / Màu sắc / Cảm xúc.
 - [ ] Tất cả chủ đề.
-- [ ] Tự tăng độ khó.
+- [ ] Chủ đề áp dụng được cho học thường, Nghe rồi gõ và Nhớ rồi gõ.
+- [ ] Tự tăng độ khó theo kết quả học.
 
 ### Phase 7 — Thống kê và hồ sơ bé
 - [ ] Tổng câu, đúng/sai, tỷ lệ chính xác, thời gian học.
@@ -134,41 +139,54 @@ Tồn đọng baseline:
 
 - Tạo `listen-mode.js`, `listen-mode.css`.
 - Dùng `window.speechSynthesis` + `SpeechSynthesisUtterance`.
-- Ban đầu ưu tiên voice `vi-VN` nhưng vẫn fallback sang giọng mặc định nếu không tìm thấy voice Việt.
 - Thêm nút **🎧 Nghe rồi gõ**, **🔊 Nghe lại**.
 - Random thông minh, ghi lỗi và Ôn lại tiếp tục hoạt động.
 - PR #4 squash merge, commit `6cc6b00`.
 
 ### 2026-08-14 — Hotfix UX: báo lỗi + giọng đọc tiếng Việt
 
-- Người dùng phản hồi khối báo lỗi nhìn quá nặng vì mỗi ký tự bị đóng thành ô đỏ, đặc biệt khi mới gõ 1 chữ.
-- Thêm `ux-hotfix.js`, `ux-hotfix.css` để sửa cách trình bày mà vẫn giữ thuật toán Levenshtein Phase 1.
-- Dòng **Cần gõ** hiển thị như chữ bình thường; chỉ phần sai/thiếu được nhấn đỏ nhẹ.
-- Dòng **Bé gõ** chỉ hiển thị nội dung bé đã gõ; không tạo hàng loạt ô placeholder cho phần chưa gõ.
-- Không còn hiển thị `SP`/ký hiệu chữ cho dấu cách; dấu cách giữ đúng khoảng trắng tự nhiên.
-- Hotfix voice chỉ chấp nhận voice có `lang` bắt đầu bằng `vi`.
-- Không còn fallback sang voice mặc định khác ngôn ngữ.
-- Thêm select **Giọng đọc tiếng Việt** trong Settings; lưu lựa chọn bằng key `goChuVer2.viVoice.v1`.
-- Nếu không có voice Việt, web khóa chức năng nghe và báo rõ thay vì đọc sai.
-- Tốc độ đọc mặc định hotfix giảm từ `0.82` xuống `0.76` để dễ nghe hơn với trẻ.
-- Phạm vi hotfix: `ux-hotfix.js`, `ux-hotfix.css`, `styles.css`, `index.html`, `HANDOFF.md`.
+- Bỏ kiểu mỗi ký tự là một ô đỏ; chỉ tô nhẹ phần sai/thiếu.
+- Không còn hiển thị `SP`; dấu cách giữ như khoảng trắng thật.
+- Dòng Bé gõ không còn tạo placeholder cho toàn bộ phần chưa nhập.
+- Voice chỉ chấp nhận `lang` bắt đầu bằng `vi`; không fallback giọng sai ngôn ngữ.
+- Thêm chọn **Giọng đọc tiếng Việt** trong Settings, key `goChuVer2.viVoice.v1`.
+- Nếu không có voice Việt, web không đọc và báo rõ.
+- Tốc độ đọc mặc định giảm còn `0.76`.
+- PR #5 squash merge, commit `26cdb63`.
 
-## 5. Kế hoạch Phase 5 — Đọc, nhớ, rồi gõ
+### 2026-08-14 — Phase 5: Nhớ rồi gõ
 
-Mục tiêu: thêm bài tập trí nhớ ngắn sau khi bé đã quen nhìn/gõ và nghe/gõ.
+- Tạo `memory-mode.js`, `memory-mode.css`.
+- Thêm thanh **🧠 Nhớ rồi gõ** trong mode Đơn giản.
+- Lọc `easyWords` theo số từ chính xác: 2 / 3 / 4 từ.
+- Lưu lựa chọn bằng `goChuVer2.memoryWords.v1` và `goChuVer2.memorySeconds.v1`.
+- Khi prompt mới xuất hiện: chữ hiện trong 3 / 5 / 7 giây; input và nút Tiếp theo bị khóa trong thời gian nhìn.
+- Hết thời gian: chữ đổi thành `🧠 Nhớ lại rồi gõ`, input được mở và tự focus.
+- Hình Phase 3 không bị ẩn nên vẫn đóng vai trò gợi ý ngữ cảnh.
+- Prompt yếu của Phase 2 vẫn được chèn thêm vào vòng Memory nếu cùng mức số từ.
+- Kết quả đúng/sai của Memory tiếp tục ghi vào thống kê prompt Phase 2.
+- Khi bật Memory, chế độ Nghe rồi gõ tự tắt; nếu bật Nghe rồi gõ thì Memory tự tắt.
+- Khi Memory bật, thanh Ôn lại được ẩn để tránh hai luồng bài tập chồng nhau; weighting prompt yếu vẫn hoạt động tự động.
+- Responsive: mobile chuyển controls thành 2 cột; landscape thấp giảm chiều cao control.
+- Phạm vi Phase 5: `memory-mode.js`, `memory-mode.css`, `styles.css`, `index.html`, `HANDOFF.md`.
+
+## 5. Kế hoạch Phase 6 — Chủ đề và cấp độ
+
+Mục tiêu: cho bé chọn nhóm nội dung quen thuộc và bắt đầu cá nhân hóa độ khó.
 
 Plan:
 
-1. Tạo chế độ phụ **Nhớ rồi gõ** trong Đơn giản.
-2. Hiện chữ vài giây rồi tự che; hình minh họa có thể giữ lại.
-3. Có đồng hồ đếm ngược nhỏ, không tạo áp lực điểm số.
-4. Mức 1: 2 từ; mức 2: 3 từ; mức 3: 4 từ.
-5. Không đưa câu dài vào Memory Mode ở giai đoạn đầu.
-6. Cho phụ huynh chỉnh 3 / 5 / 7 giây.
-7. Gõ sai vẫn dùng Phase 1; prompt yếu vẫn dùng Phase 2.
-8. Memory Mode và Nghe rồi gõ phải loại trừ nhau để tránh một prompt vừa bị che vừa tự đọc.
-9. Mobile không để timer/controls đẩy input khỏi màn hình.
-10. Mọi code + quyết định tiếp tục cập nhật HANDOFF trong cùng PR.
+1. Tách metadata chủ đề ra file riêng, không thay toàn bộ `easyWords` thành object ngay lập tức.
+2. Chủ đề đầu tiên: **Tất cả / Động vật / Gia đình / Đồ ăn / Thiên nhiên / Trường học / Đồ vật / Cơ thể / Màu sắc / Cảm xúc**.
+3. Dùng keyword/mapping rõ ràng; prompt không phân loại được vẫn nằm trong **Tất cả**.
+4. Khi chọn chủ đề, random thông minh chỉ random trong pool chủ đề đó.
+5. Ôn lỗi chỉ lấy prompt thuộc chủ đề đang chọn khi đang học theo chủ đề; thống kê gốc vẫn giữ chung.
+6. Nghe rồi gõ và Nhớ rồi gõ tiếp tục dùng cùng filter chủ đề.
+7. Thêm cấp độ tự động ban đầu dựa trên số từ + tỷ lệ đúng, nhưng không tự tăng quá nhanh.
+8. Cho phụ huynh có thể khóa một mức thay vì để Auto.
+9. Lưu chủ đề/cấp độ bằng `localStorage`.
+10. UI chủ đề phải gọn trên mobile, ưu tiên select/dropdown thay vì 9 nút lớn.
+11. Cập nhật HANDOFF trong cùng PR.
 
 ## 6. Việc còn tồn đọng
 
