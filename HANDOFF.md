@@ -40,7 +40,8 @@ Web HTML/CSS/JS thuần cho bé luyện **đọc → gõ → sửa lỗi → ôn
 - [x] Đợt 8 — UI scope + visual accuracy + regression guards.
 - [x] Đợt 9 — visual mapping round 2.
 - [x] Đợt 10 — freeze/stability audit + runtime diagnostics.
-- [~] **Đợt 11 — Easy startup performance rewrite.**
+- [x] **Đợt 11 — Easy startup performance rewrite — code + CI hoàn tất.**
+- [ ] **Đợt 11B — browser/device performance gate.**
 - [ ] **Đợt 12 — Responsive UI redesign PC/mobile.**
 - [ ] Vendor/commit SVG Twemoji thật nếu muốn offline visual 100%.
 - [ ] Deploy QA thực tế sau khi binary hoàn tất.
@@ -81,13 +82,15 @@ Web HTML/CSS/JS thuần cho bé luyện **đọc → gõ → sửa lỗi → ôn
 - Phase 9 đợt 9: PR #24 → `ed76406`
 - Phase 9 đợt 10: PR #26 → `25d2727`
 - Plan performance + responsive: PR #28 → `1cd65bc`
-- Phase 9 đợt 11: branch `agent/easy-startup-performance`, PR/commit cập nhật sau merge.
+- **Phase 9 đợt 11 Easy performance: PR #29 → `b27de10`**
 
 Tooling scaffolding trước đợt 6:
 
 - `tools/vendor_twemoji.py` → `c35c53f`
 - `twemoji-local-manifest.js` → `a98d2c5`
 - `OFFLINE_VISUAL.md` → `853541d`
+
+Ghi chú cleanup: có branch rỗng `noop` tạo nhầm khi chuyển tool; không chứa code và không ảnh hưởng `main`, có thể xóa khi dọn branch.
 
 ---
 
@@ -127,16 +130,9 @@ Chỉ Easy được hiển thị/chạy:
 
 ### Visual semantic mapping
 
-Mapping dùng:
+Mapping dùng `exact` + `contains` whitelist. Không chắc nghĩa → **không hiện hình**, không ép hình gần nghĩa.
 
-```text
-exact: [...]      // match toàn prompt
-contains: [...]   // phrase whitelist rõ nghĩa
-```
-
-Không chắc nghĩa → **không hiện hình**, không ép hình gần nghĩa.
-
-PR #24 mở rộng mapping đúng cho nhiều động vật: sư tử, hổ, gấu, sói, cáo, nai/hươu, rùa, rắn, ếch, cua, tôm, cá mập, cá heo, cánh cụt, đại bàng, cú, ong, bướm...
+PR #24 mở rộng mapping đúng cho nhiều động vật như sư tử, hổ, gấu, sói, cáo, nai/hươu, rùa, rắn, ếch, cua, tôm, cá mập, cá heo, cánh cụt, đại bàng, cú, ong, bướm...
 
 ---
 
@@ -144,51 +140,44 @@ PR #24 mở rộng mapping đúng cho nhiều động vật: sư tử, hổ, g�
 
 PR #26 → `25d2727`.
 
-Đã sửa:
-
-- bỏ auto-fullscreen từng chạy trên `click/keydown/wheel`;
-- throttle Free resize/input bằng `requestAnimationFrame`;
-- Free dropdown render một lần, không tải hàng chục thumbnail mỗi lần mở;
+- bỏ auto-fullscreen trên `click/keydown/wheel`;
+- throttle Free resize/input bằng rAF;
+- Free dropdown render một lần;
 - cleanup timer/audio khi `pagehide`;
-- `performance-health.js` theo dõi Long Task/runtime error/unhandled rejection.
+- thêm Long Task/runtime diagnostics.
 
 Debug:
 
 ```js
-getGoChuPerformanceHealth()
 printGoChuPerformanceHealth()
 ```
 
 ---
 
-## 7. Phase 9 đợt 11 — Easy startup performance 🟡
+## 7. Phase 9 đợt 11 — Easy startup performance ✅ code/CI
 
-Branch:
+PR #29 → `b27de10`.
 
-```text
-agent/easy-startup-performance
-```
+### Root cause chính
 
-### Root cause đã xác định
+`topic-level.js` cũ tính `getEffectiveLearningLevel()` **cho từng prompt** trong Smart Easy round. Mỗi lần lại có thể scan toàn bộ `easyWords` và topic terms.
 
-Easy không chỉ lag vì animation. Hot path lớn nằm ở `topic-level.js`.
-
-Trước fix, mỗi prompt trong một Smart Easy round gọi `promptMatchesLearningFilters()`. Hàm này lại gọi `getEffectiveLearningLevel()` cho **từng prompt**. `getEffectiveLearningLevel()` tiếp tục dựng topic/level pool bằng cách scan toàn bộ `easyWords` và chạy topic-term matching.
-
-Dạng tải thực tế gần:
+Với hàng trăm prompt, hot path gần:
 
 ```text
 N prompt
-× calculate effective level
+× effective-level calculation
 × scan N prompt
-× normalize + topic matching
+× normalize/topic matching
 ```
 
-Với hàng trăm prompt đây là hot path gần O(n²), phù hợp với triệu chứng **mở Easy gần treo tab/máy**.
+=> gần O(n²), phù hợp triệu chứng mở Easy gần treo máy.
 
-### 7.1 Cache dữ liệu tĩnh ✅
+### Fix đã merge
 
-`topic-data.js` thêm:
+#### Cache dữ liệu tĩnh
+
+`topic-data.js`:
 
 ```js
 GO_CHU_UNIQUE_EASY_PROMPTS
@@ -198,109 +187,75 @@ goChuTopicMatchCache
 goChuWordCountCache
 ```
 
-- normalize string một lần;
-- topic membership cache;
-- word count cache;
-- normalized topic terms compile một lần.
+#### Cache topic/level pool
 
-Debug:
-
-```js
-getGoChuTopicCacheHealth()
-```
-
-### 7.2 Cache topic/level pool + cắt O(n²) ✅
-
-`topic-level.js` thêm:
+`topic-level.js`:
 
 ```js
 goChuTopicPoolCache
 goChuLevelPoolCache
 ```
 
-Critical fix:
+`effectiveLevel` chỉ tính **một lần cho cả round**, không per-prompt.
 
-```js
-const effectiveLevel = getEffectiveLearningLevel();
-```
+#### Smart Review
 
-chỉ tính **một lần cho cả round**, không một lần mỗi prompt.
+Tái sử dụng `GO_CHU_EASY_PROMPT_SET`, không tạo lại Set hàng trăm phần tử mỗi lần.
 
-`getWeakPromptRecords()` cũng tính effective level một lần trước khi filter.
+#### Visual
 
-Debug:
-
-```js
-getGoChuLearningPoolHealth()
-```
-
-### 7.3 Smart Review reuse Easy Set ✅
-
-Không tạo lại `new Set(easyWords)` trong mỗi `getWeakPromptRecords()` nếu `GO_CHU_EASY_PROMPT_SET` đã có.
-
-### 7.4 Visual deferred + cache ✅
-
-`visual-prompt.js`:
-
-- compile visual exact/contains rules một lần;
-- cache prompt → visual result;
-- visual/network chỉ chạy ở `requestAnimationFrame` sau prompt/input;
+- compile semantic rule một lần;
+- cache prompt → visual;
+- render visual ở frame sau prompt/input;
 - image lazy + async decode + low priority;
-- stale image request không được ghi đè prompt mới.
+- stale request không ghi đè prompt mới.
 
-### 7.5 Web Speech lazy ✅
+#### Listen/Web Speech
 
-Khi Listen tắt:
-
+- không enumerate voice khi Listen tắt;
 - không `getVoices()` trên mỗi `showText`;
-- không enumerate voice ngay startup;
-- voice selector chỉ dựng khi mở Settings;
-- voice runtime chỉ initialize khi thật sự bật Listen hoặc cần debug/settings.
+- voice selector chỉ dựng khi Settings mở;
+- voice chỉ resolve khi bật Listen/fallback/debug.
 
-### 7.6 Dashboard lazy ✅
+#### Profile/dashboard
 
-Profile startup chỉ load registry/data + preferences.
+- startup không dựng dashboard DOM;
+- dashboard chỉ dựng khi bấm 👤;
+- existing profile không bị stringify/write lại vô điều kiện lúc load;
+- accessibility tự bind profile modal lazy.
 
-Không còn:
+#### Hard/Free mode stats
 
-```text
-startup → ensureProfileDashboard → render toàn bộ dashboard
-```
+Fix thêm lỗi dữ liệu:
 
-Dashboard DOM/statistics chỉ dựng khi bấm 👤.
+- hydrate `modeStats` từ raw profile storage;
+- hydrate trước dashboard render khi đổi profile;
+- không startup-save rỗng làm mất thống kê Nâng cao/Tự do.
 
-Existing profile cũng không bị stringify/write lại vô điều kiện ở mỗi startup.
+#### Asset probe
 
-Accessibility đã được sửa để tự bind modal profile khi modal được tạo lazy.
+`../IMG` probing chạy idle bằng `requestIdleCallback` hoặc timer fallback, không chen vào critical first paint.
 
-### 7.7 Asset probing idle ✅
+### Startup diagnostics
 
-`asset-reliability.js` probe `../IMG` bằng:
-
-```text
-requestIdleCallback(timeout 1200)
-hoặc setTimeout 700ms
-```
-
-Không chen vào critical Easy first paint.
-
-### 7.8 Startup diagnostics ✅
-
-Files mới:
+Files:
 
 ```text
 startup-performance.js
 startup-runtime-instrument.js
+PERFORMANCE_QA.md
 ```
 
-Debug:
+Console:
 
 ```js
-getGoChuStartupPerformance()
 printGoChuStartupPerformance()
+printGoChuPerformanceHealth()
+getGoChuTopicCacheHealth()
+getGoChuLearningPoolHealth()
 ```
 
-Markers:
+Markers chính:
 
 ```text
 bootstrap
@@ -313,55 +268,47 @@ easy:firstInputReady
 assetProbe:started
 ```
 
-Measures:
+### CI
 
-```text
-profile:init
-setMode:easy
-showText:easy
-```
+PR #29 CI PASS sau review fixes.
 
-### 7.9 Regression guard ✅
+Static verifier khóa regression nếu:
 
-`tools/verify_repository.py` sẽ fail nếu:
-
-- cache topic/word-count/pool bị xóa;
-- `buildSmartEasyRound` quay lại effective-level per prompt;
-- visual không còn deferred/cache;
-- dashboard quay lại eager startup;
+- cache bị xóa;
+- effective-level quay lại per-prompt;
+- visual quay lại eager;
+- dashboard quay lại eager;
 - voice enumeration quay lại startup;
-- asset probing quay lại critical path;
-- startup marker scripts/load order bị mất.
+- asset probe quay lại critical path;
+- startup scripts/load order bị mất.
 
-### Performance gate
+### Đợt 11B — browser performance gate còn phải kiểm tra
 
 Mục tiêu:
 
 ```text
 Desktop first input ready < 150 ms
 Mobile tầm trung < 300 ms
-showText không có Long Task > 50 ms
+showText không Long Task > 50 ms
 network không block input
 ```
 
-**CI chỉ kiểm tra regression tĩnh. Số ms thật phải đo bằng browser/device thật.**
+CI không thể chứng minh latency thật của thiết bị/browser. Dùng `PERFORMANCE_QA.md` để đo trên local/Vercel.
 
-Trạng thái branch hiện tại: implementation code đã xong phần chính, đang chờ CI/smoke review trước merge.
+**Chỉ bắt đầu UI redesign sau khi xác nhận Easy không còn gần treo.**
 
 ---
 
 ## 8. Phase 9 đợt 12 — Responsive UI redesign PC/mobile
-
-**Chỉ bắt đầu sau khi đợt 11 merge và Easy không còn gần treo.**
 
 ### Nguyên tắc
 
 ```text
 Prompt + input là trung tâm.
 Tool phụ compact/collapsible.
-Không để feedback làm layout nhảy mạnh.
+Feedback không làm layout nhảy mạnh.
 PC tận dụng chiều ngang.
-Mobile ưu tiên ít cuộn, touch target lớn.
+Mobile ít cuộn, touch target lớn.
 ```
 
 ### PC >= 1024px
@@ -382,8 +329,6 @@ Mobile ưu tiên ít cuộn, touch target lớn.
 └───────────────────────────────────┘
 ```
 
-Easy tools đổi từ nhiều panel dọc thành control strip 1–2 hàng.
-
 ### Mobile <= 767px
 
 ```text
@@ -403,16 +348,13 @@ INPUT
 Feedback
 ```
 
-- title lớn thu gọn trên mobile;
+- title lớn thu gọn;
 - input 52–60px tối thiểu;
-- button touch target >= 48px;
-- tool chi tiết dùng popover/bottom sheet;
-- Memory Mức/Thời gian chỉ mở khi active;
+- touch target >= 48px;
+- Memory Mức/Thời gian chỉ hiện khi active;
 - Nghe lại chỉ hiện khi Listen active.
 
 ### Feedback mới
-
-Không dùng card vàng cao như hiện tại.
 
 PC:
 
@@ -425,34 +367,28 @@ Mobile:
 ```text
 ❌ Chưa đúng
 Cần: chị em
-Gõ:  12
+Gõ: 12
 ```
 
-Feedback zone giữ chiều cao ổn định để prompt/input không nhảy.
+Feedback zone giữ chiều cao ổn định.
 
-### Dashboard
+### Dashboard mới
 
-Desktop:
+Desktop: summary cards + tabs `Tổng quan | Hay sai | Chủ đề | Chế độ | Dữ liệu`.
+
+Mobile: full-screen sheet + tabs/accordion, tránh modal dài hàng nghìn px.
+
+### Breakpoints/QA
 
 ```text
-Profile header
-4 summary cards
-Tabs: Tổng quan | Hay sai | Chủ đề | Chế độ | Dữ liệu
+<=480
+481–767
+768–1023
+>=1024
+>=1440
 ```
 
-Mobile: full-screen sheet + tabs/accordion, không một modal dài hàng nghìn px.
-
-### Breakpoints
-
-```text
-<=480        phone nhỏ
-481–767      phone lớn
-768–1023     tablet
->=1024       desktop
->=1440       wide desktop
-```
-
-QA:
+Test:
 
 ```text
 360×640
@@ -464,11 +400,11 @@ QA:
 1920×1080
 ```
 
-Test thêm zoom 125%/150% và Windows display scaling.
+thêm zoom 125%/150% và Windows display scaling.
 
 ---
 
-## 9. Listen / Google TTS
+## 9. Google TTS
 
 Easy-only runtime:
 
@@ -478,13 +414,7 @@ Easy-only runtime:
 3. báo thiếu audio
 ```
 
-Default renderer:
-
-```text
-vi-VN-Chirp3-HD-Aoede
-rate 0.82
-MP3
-```
+Default renderer: `vi-VN-Chirp3-HD-Aoede`, rate `0.82`, MP3.
 
 MP3 thật chưa render vì chờ Google Cloud account người dùng.
 
@@ -505,70 +435,35 @@ Không match semantic → không hiện hình.
 
 ---
 
-## 11. CI / diagnostics
+## 11. Thứ tự tiếp theo
 
-CI hiện chạy:
-
-1. Python compile.
-2. `node --check` toàn bộ JS root.
-3. `tools/verify_repository.py`.
-4. deploy readiness report.
-5. Twemoji dry-run.
-6. Google TTS dry-run.
-
-Runtime debug chính:
+1. Người dùng `git pull` / đợi Vercel deploy `b27de10`.
+2. Chạy theo `PERFORMANCE_QA.md`.
+3. Console:
 
 ```js
-runGoChuSmokeTests()
 printGoChuStartupPerformance()
 printGoChuPerformanceHealth()
-getGoChuTopicCacheHealth()
-getGoChuLearningPoolHealth()
-getGoChuTtsHealth()
-getGoChuVisualHealth()
-getGoChuAssetHealth()
-getGoChuStorageHealth()
 ```
 
----
-
-## 12. Thứ tự tiếp theo
-
-1. Mở PR Phase 9 đợt 11.
-2. CI phải PASS.
-3. Review diff + merge nếu sạch.
-4. Người dùng `git pull` và đo `printGoChuStartupPerformance()` trên Vercel/local.
-5. Nếu Easy đã hết treo → bắt đầu Phase 9 đợt 12 UI redesign.
-6. Nếu vẫn có Long Task → dùng startup/performance diagnostics truy đúng hot path trước khi redesign.
+4. Nếu Easy hết treo và gate hợp lý → bắt đầu Phase 9 đợt 12 UI redesign.
+5. Nếu còn long task lớn → truy đúng marker/hot path trước khi redesign.
+6. Sau UI redesign chạy full cross-device QA.
 
 ---
 
-## 13. Việc chờ người dùng
+## 12. Việc chờ người dùng
 
-### Google TTS
-
-- setup Google Cloud;
-- nghe sample;
-- chốt voice/rate;
-- render MP3;
-- commit `Audio/tts/*.mp3` + `tts-manifest.js`.
-
-### Twemoji local 100%
-
-```bat
-tools\vendor_twemoji.bat
-```
-
-### Binary khác
-
-4 Music/UI audio gốc vẫn chưa có remote.
+- Google TTS sample/render MP3 thật.
+- Twemoji local 100% nếu muốn: `tools\vendor_twemoji.bat`.
+- 4 Music/UI audio binary gốc chưa có remote.
 
 ---
 
-## 14. Release gate cuối
+## 13. Release gate cuối
 
 1. `python tools/verify_repository.py` PASS.
-2. Easy startup browser performance gate PASS.
+2. Browser Easy startup performance gate PASS.
 3. `python tools/check_deploy_ready.py --strict` PASS khi binary đủ.
 4. `?debug=1` smoke PASS.
 5. Network Offline test.
