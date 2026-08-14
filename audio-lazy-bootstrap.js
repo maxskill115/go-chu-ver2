@@ -1,7 +1,7 @@
 /* ===== PHASE 9 ĐỢT 11B - KHÔNG TẢI AUDIO TRƯỚC TƯƠNG TÁC =====
  * Phải nạp trước script-core.js.
- * Giữ API `new Audio(url)` tương thích nhưng trì hoãn gắn src cho tới
- * pointer/keyboard đầu tiên. Nhờ vậy MP3/WAV không chen vào startup network.
+ * Giữ API `new Audio(url)` tương thích nhưng chỉ gắn src khi audio đó thật sự play().
+ * Nhờ vậy MP3/WAV không chen vào startup network và cũng không tải đồng loạt ở click đầu.
  */
 (function(){
     const NativeAudio = window.Audio;
@@ -11,14 +11,7 @@
     const pending = new Set();
 
     function unlockAudio(){
-        if(userActivated) return;
         userActivated = true;
-        pending.forEach(record => {
-            if(record.audio && record.src && !record.audio.getAttribute("src")){
-                record.audio.src = record.src;
-            }
-        });
-        pending.clear();
     }
 
     document.addEventListener("pointerdown", unlockAudio, { capture: true, once: true, passive: true });
@@ -30,10 +23,7 @@
         audio.preload = "none";
 
         const record = { audio, src: deferredSrc };
-        if(deferredSrc){
-            if(userActivated) audio.src = deferredSrc;
-            else pending.add(record);
-        }
+        if(deferredSrc) pending.add(record);
 
         const nativePlay = audio.play.bind(audio);
         audio.play = function(){
