@@ -25,6 +25,9 @@
 - [x] **Phase 7** — Nhiều hồ sơ bé + dashboard + backup JSON.
 - [x] **Phase 8** — Progress theo từ + lỗi dấu + Telex/VNI guide.
 - [~] **Phase 9** — Ổn định hóa, QA, offline, mở rộng stats.
+  - [x] Đợt 1: smoke test + QA checklist.
+  - [x] Đợt 2: audit wrapper + stats riêng Nâng cao/Tự do.
+  - [ ] Đợt tiếp: asset/offline + accessibility + storage audit.
 
 ## 3. PR / commit chính
 
@@ -38,6 +41,7 @@
 - Phase 7: PR #8 → `e281c40`.
 - Phase 8: PR #9 → `10d756e`.
 - Phase 9 stabilization đợt 1: PR #10 → `36d16dc`.
+- Phase 9 stabilization đợt 2: branch `agent/phase9-stabilization-2`, PR/commit cập nhật sau merge.
 
 ## 4. Các hệ thống hiện có
 
@@ -54,6 +58,7 @@
 - Phase 8 bổ sung: `accentErrors`, `lastAccentErrorAt`.
 - Weakness: `wrong * 2 - correct`.
 - Ôn lại tối đa 20 prompt yếu/lượt.
+- **Chỉ Easy / Listen / Memory ghi vào `promptStats`.**
 
 ### Phase 3 — Visual
 
@@ -95,14 +100,13 @@
 - Data: `goChuVer2.profile.<profileId>.v1`.
 - Lần đầu tạo **Bé 1** và migrate stats/topic/level/Memory legacy.
 - Profile giữ:
-  - `promptStats`;
+  - `promptStats` của Easy;
+  - `modeStats.hard/free` từ Phase 9 đợt 2;
   - thời gian hôm nay/tổng;
   - topic/level;
   - Memory words/seconds.
 - Voice/volume/hoa-thường là setting thiết bị, không tách theo bé.
-- Dashboard: tổng quan, weak prompts, stats theo topic, lỗi dấu, reset, export/import JSON.
-
-**Giới hạn:** adaptive prompt stats hiện tập trung ở Đơn giản + Listen/Memory. Nâng cao/Tự do chưa có adaptive prompt stats theo prompt.
+- Dashboard: tổng quan, weak prompts, stats theo topic, lỗi dấu, stats theo mode, reset, export/import JSON.
 
 ### Phase 8 — Vietnamese input
 
@@ -131,15 +135,14 @@ Behavior:
 
 ## 5. Phase 9 — Ổn định hóa
 
-### Đợt 1 — Smoke test + QA checklist
+### Đợt 1 — Smoke test + QA checklist ✅
 
 Đã merge qua PR #10 → `36d16dc`:
 
 - `debug-smoke.js`.
 - `QA_CHECKLIST.md`.
-- `index.html` nạp `debug-smoke.js` **sau toàn bộ app**, nên không can thiệp các wrapper chính.
-
-Smoke test mặc định **không tự chạy**.
+- `index.html` nạp `debug-smoke.js` sau toàn bộ app.
+- Smoke test mặc định không tự chạy.
 
 Chạy bằng:
 
@@ -153,46 +156,77 @@ hoặc Console:
 runGoChuSmokeTests()
 ```
 
-Smoke test kiểm tra:
+### Đợt 2 — Audit wrapper + stats Nâng cao/Tự do ✅
 
-- `con mèo` → Động vật.
-- `mặt trời` → Thiên nhiên và không → Cơ thể.
-- `màu cam` → Màu sắc và không → Đồ ăn.
-- `quả cam` → Đồ ăn.
-- Telex `bé`, `mèo`, `tiếng`.
-- VNI `bé`, `chữ`.
-- accent detection `meo → mèo`, `di → đi`.
-- lỗi chữ thường không bị nhầm thành lỗi dấu.
-- level nằm 1–4.
-- topic pool không rỗng.
-- có active profile + promptStats.
-- smart round không có prompt trùng ngay liền nhau.
+Branch: `agent/phase9-stabilization-2`.
 
-`QA_CHECKLIST.md` bao phủ:
+Files/phạm vi:
 
-- startup/HUD;
-- normal Easy;
-- Smart Review;
-- ảnh;
-- Listen;
-- Memory;
-- topic/level;
-- profiles;
-- dashboard;
-- Telex/VNI;
-- Nâng cao/Tự do;
-- desktop/mobile 360×640, 390×844, 640×360.
+- `mode-stats.js` — stats riêng Hard/Free.
+- `RUNTIME_ARCHITECTURE.md` — tài liệu load order và wrapper chain.
+- `debug-smoke.js` — thêm runtime/schema tests.
+- `index.html` — nạp `mode-stats.js` **sau `script.js`**.
+- `HANDOFF.md`.
 
-### Việc tiếp theo Phase 9
+#### Kết quả audit wrapper
 
-1. Chạy/check smoke tests trên deploy thực tế.
-2. Audit chuỗi wrapper `showText`, `setMode`, `checkNext` sau nhiều phase.
-3. Mở rộng thống kê Nâng cao/Tự do nhưng **không** đưa chúng vào weakness/adaptive Easy.
-4. Gom `../IMG/...` hoặc thêm local fallback.
-5. Upload audio binary khi connector hỗ trợ luồng binary phù hợp.
-6. Nếu cần offline 100%, kéo Twemoji SVG đang dùng về repo.
-7. Accessibility: tab focus, aria, Escape, keyboard-only.
-8. Rà soát write frequency/localStorage khi profile data lớn.
+Không refactor lớn vì chuỗi hiện tại đang hoạt động và chưa phát hiện vòng gọi đệ quy. Thứ tự chính được khóa/tài liệu hóa trong `RUNTIME_ARCHITECTURE.md`.
+
+Chuỗi quan trọng:
+
+- `showText`: core → smart → visual → listen → memory → topic → vietnamese → mode-stats.
+- `setMode`: core → smart → listen → memory → topic → vietnamese.
+- `checkNext`: core → smart implementation → memory wrapper → mode-stats wrapper.
+- `showTypingDiff`: core → UX hotfix renderer → Vietnamese accent wrapper.
+- `setListenMode`: listen → UX voice guard → memory mutual-exclusion → Vietnamese guide refresh.
+
+Invariant bắt buộc:
+
+- Listen và Memory không cùng active.
+- Mỗi wrapper gọi base đúng một lần.
+- Module nào cần `submitFreeAnswer`/`setFreeTarget` phải nạp sau `script.js`.
+
+#### Stats Nâng cao / Tự do
+
+Schema profile bổ sung:
+
+```text
+modeStats: {
+  hard: { correct, wrong, lastCorrectAt, lastWrongAt },
+  free: { correct, wrong, lastCorrectAt, lastWrongAt }
+}
+```
+
+Quy tắc:
+
+- Hard: cùng một prompt sai nhiều lần chỉ ghi tối đa **1 sai**; khi giải đúng ghi **1 đúng**.
+- Free: cùng một target sai nhiều lần chỉ ghi tối đa **1 sai**; hoàn thành đúng ghi **1 đúng**.
+- `modeStats` được lưu trong đúng hồ sơ bé hiện tại và đi theo export/import backup.
+- Hard/Free **không ghi vào `promptStats`**, không tham gia weakness, Ôn lại, topic Auto level hoặc adaptive Easy.
+- Dashboard tổng quan `Lượt luyện / Đúng / Sai / Chính xác` cộng Easy + Hard + Free.
+- Dashboard thêm mục **Theo chế độ** để xem riêng Đơn giản / Nâng cao / Tự do.
+- `Cần ôn` và `Lỗi dấu` vẫn là dữ liệu Easy.
+
+#### Smoke test mở rộng
+
+Đã thêm kiểm tra:
+
+- final runtime functions tồn tại: `showText`, `setMode`, `checkNext`, `nextPromptForCurrentMode`, `submitFreeAnswer`, `setListenMode`, `setMemoryMode`;
+- Listen/Memory không cùng active;
+- profile có `modeStats.hard/free`;
+- schema Hard/Free có `attempts = correct + wrong`;
+- Hard/Free không bị đưa vào `promptStats` adaptive.
+
+### Plan tiếp theo Phase 9
+
+1. Chạy smoke/QA trên deploy thực tế và xử lý lỗi nếu có.
+2. Gom dependency `../IMG/...` vào repo hoặc thêm fallback local để trang đứng độc lập hơn.
+3. Đưa audio binary cần thiết vào repo khi có luồng upload binary phù hợp.
+4. Nếu muốn offline 100%, tải các Twemoji SVG thực sự đang dùng về local thay CDN.
+5. Accessibility: focus trap dashboard, trả focus về nút mở, aria trạng thái, keyboard-only.
+6. Audit `localStorage`/backup khi profile lớn; tránh normalize/save quá nhiều dữ liệu không đổi.
+7. Dọn các branch thử Phase 2 nếu không còn cần.
+8. Sau khi ổn định mới cân nhắc feature mới thay vì tiếp tục chồng wrapper.
 
 ## 6. Tồn đọng
 
@@ -200,4 +234,4 @@ Smoke test kiểm tra:
 - `../IMG/...` còn phụ thuộc ngoài repo.
 - Hai branch thử Phase 2 có thể xóa thủ công.
 - Twemoji đang dùng CDN, chưa offline 100%.
-- Nâng cao/Tự do chưa có stats riêng đầy đủ.
+- Hard/Free đã có stats tổng riêng nhưng **adaptive/weakness vẫn cố ý chỉ dành cho Easy**.
