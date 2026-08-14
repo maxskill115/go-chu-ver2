@@ -109,8 +109,10 @@ def list_voices() -> int:
     voices = sorted(response.voices, key=lambda voice: voice.name)
     print(f"Tìm thấy {len(voices)} voice vi-VN:\n")
     for voice in voices:
-        genders = texttospeech.SsmlVoiceGender
-        gender_name = genders(voice.ssml_gender).name if voice.ssml_gender else "UNKNOWN"
+        try:
+            gender_name = texttospeech.SsmlVoiceGender(voice.ssml_gender).name
+        except Exception:
+            gender_name = str(voice.ssml_gender)
         print(f"- {voice.name:<38} {gender_name:<8} {voice.natural_sample_rate_hertz} Hz")
     return 0
 
@@ -133,6 +135,16 @@ def synthesize(client, texttospeech, text: str, voice_name: str, speaking_rate: 
     return response.audio_content
 
 
+def collect_existing_manifest_items(all_words: list[str]) -> list[tuple[str, str]]:
+    items: list[tuple[str, str]] = []
+    for text in all_words:
+        filename = file_name_for_text(text)
+        path = OUTPUT_DIR / filename
+        if path.exists() and path.stat().st_size > 0:
+            items.append((text, filename))
+    return items
+
+
 def write_manifest(items: list[tuple[str, str]], voice: str, rate: float) -> None:
     mapping = {text: f"Audio/tts/{filename}" for text, filename in items}
     generated_at = dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -153,22 +165,38 @@ def write_manifest(items: list[tuple[str, str]], voice: str, rate: float) -> Non
     MANIFEST_FILE.write_text(content, encoding="utf-8", newline="\n")
 
 
+def select_render_words(all_words: list[str], args: argparse.Namespace) -> list[str]:
+    words = list(all_words)
+    if args.only:
+        wanted = {normalize_text(value) for value in args.only}
+        known = set(all_words)
+        missing = sorted(wanted - known)
+        if missing:
+            print("Cảnh báo: các câu --only sau không có trong easyWords:", file=sys.stderr)
+            for item in missing:
+                print(f"- {item}", file=sys.stderr)
+        words = [word for word in all_words if word in wanted]
+    if args.limit:
+        words = words[: args.limit]
+    return words
+
+
 def render_all(args: argparse.Namespace) -> int:
     if not 0.25 <= args.speaking_rate <= 2.0:
         raise RuntimeError("--speaking-rate phải nằm trong khoảng 0.25 đến 2.0")
 
-    words = extract_easy_words()
-    if args.only:
-        wanted = {normalize_text(value) for value in args.only}
-        words = [word for word in words if word in wanted]
-    if args.limit:
-        words = words[: args.limit]
+    all_words = extract_easy_words()
+    words = select_render_words(all_words, args)
 
     print(f"Nguồn: {DATA_FILE.name}")
-    print(f"Số câu duy nhất: {len(words)}")
+    print(f"Tổng prompt duy nhất: {len(all_words)}")
+    print(f"Prompt xử lý lần này: {len(words)}")
     print(f"Voice: {args.voice}")
     print(f"Speaking rate: {args.speaking_rate}")
     print(f"Output: {OUTPUT_DIR}")
+
+    if (args.only or args.limit) and args.force:
+        print("Lưu ý: --force hiện chỉ render đè subset được chọn; các MP3 khác giữ nguyên.")
 
     if args.dry_run:
         for index, text in enumerate(words, 1):
@@ -181,7 +209,6 @@ def render_all(args: argparse.Namespace) -> int:
     generated = 0
     skipped = 0
     failed = 0
-    manifest_items: list[tuple[str, str]] = []
 
     for index, text in enumerate(words, 1):
         filename = file_name_for_text(text)
@@ -189,7 +216,6 @@ def render_all(args: argparse.Namespace) -> int:
 
         if output_path.exists() and output_path.stat().st_size > 0 and not args.force:
             skipped += 1
-            manifest_items.append((text, filename))
             print(f"[{index:04d}/{len(words):04d}] SKIP  {text}")
             continue
 
@@ -199,19 +225,21 @@ def render_all(args: argparse.Namespace) -> int:
                 raise RuntimeError("Google TTS trả audio rỗng")
             output_path.write_bytes(audio)
             generated += 1
-            manifest_items.append((text, filename))
             print(f"[{index:04d}/{len(words):04d}] OK    {text} -> {filename}")
         except Exception as exc:  # Tiếp tục batch để không mất các file đã render.
             failed += 1
             print(f"[{index:04d}/{len(words):04d}] ERROR {text}: {exc}", file=sys.stderr)
 
+    # Manifest luôn phản ánh TẤT CẢ MP3 đang tồn tại cho easyWords,
+    # không chỉ subset --only/--limit của lần chạy hiện tại.
+    manifest_items = collect_existing_manifest_items(all_words)
     write_manifest(manifest_items, args.voice, args.speaking_rate)
 
     print("\nHoàn tất")
     print(f"- Render mới: {generated}")
     print(f"- Bỏ qua file có sẵn: {skipped}")
     print(f"- Lỗi: {failed}")
-    print(f"- Manifest: {len(manifest_items)} câu")
+    print(f"- Manifest hiện có: {len(manifest_items)}/{len(all_words)} câu")
     print(f"- File: {MANIFEST_FILE}")
 
     if failed:
@@ -221,6 +249,8 @@ def render_all(args: argparse.Namespace) -> int:
 
 
 def render_sample(args: argparse.Namespace) -> int:
+    if not 0.25 <= args.speaking_rate <= 2.0:
+        raise RuntimeError("--speaking-rate phải nằm trong khoảng 0.25 đến 2.0")
     texttospeech, client = load_tts_client()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     sample_text = normalize_text(args.sample)
@@ -237,9 +267,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Render easyWords thành MP3 Google Cloud TTS")
     parser.add_argument("--voice", default=DEFAULT_VOICE, help=f"Voice Google TTS (mặc định: {DEFAULT_VOICE})")
     parser.add_argument("--speaking-rate", type=float, default=DEFAULT_RATE, help=f"Tốc độ đọc 0.25-2.0 (mặc định: {DEFAULT_RATE})")
-    parser.add_argument("--force", action="store_true", help="Render đè cả file MP3 đã tồn tại")
-    parser.add_argument("--limit", type=int, default=0, help="Chỉ render N câu đầu để test")
-    parser.add_argument("--only", action="append", default=[], help="Chỉ render đúng câu này; có thể dùng nhiều lần")
+    parser.add_argument("--force", action="store_true", help="Render đè file MP3 thuộc tập đang xử lý")
+    parser.add_argument("--limit", type=int, default=0, help="Chỉ gọi API cho N câu đầu để test")
+    parser.add_argument("--only", action="append", default=[], help="Chỉ gọi API cho đúng câu này; có thể dùng nhiều lần")
     parser.add_argument("--dry-run", action="store_true", help="Chỉ liệt kê file sẽ tạo, không gọi Google API")
     parser.add_argument("--list-voices", action="store_true", help="Liệt kê voice vi-VN từ Google Cloud")
     parser.add_argument("--sample", default="", help="Render một câu thử vào Audio/tts/_sample.mp3")
