@@ -58,14 +58,46 @@ def check_script_refs() -> None:
     ok("Load order runtime chính hợp lệ")
 
 
+def check_styles() -> None:
+    styles = read("styles.css")
+    if '@import url("ui-scope-fixes.css");' not in styles:
+        fail("styles.css chưa import ui-scope-fixes.css")
+    scope = read("ui-scope-fixes.css")
+    if ".hidden-by-mode" not in scope or "display:none !important" not in scope.replace(" ", ""):
+        fail("UI scope guard cho hidden-by-mode chưa đủ mạnh")
+    ok("UI scope stylesheet đã được nạp cuối cascade")
+
+
 def extract_visual_codes() -> list[str]:
     source = read("visual-data.js")
     codes = re.findall(r'\bcode:\s*"([0-9a-f-]+)"', source, flags=re.I)
     unique = list(dict.fromkeys(code.lower() for code in codes))
     if not unique:
         fail("Không tìm thấy Twemoji code")
+    if re.search(r'\bkeywords\s*:', source):
+        fail("visual-data.js quay lại keyword mapping rộng; phải dùng exact/contains whitelist")
+    if "exact:" not in source or "contains:" not in source:
+        fail("visual-data.js thiếu exact/contains semantic mapping")
     ok(f"Twemoji rules: {len(codes)} rule / {len(unique)} code duy nhất")
     return unique
+
+
+def check_easy_scope_guards() -> None:
+    listen = read("listen-mode.js")
+    tts = read("tts-local.js")
+    smart = read("smart-review.js")
+    visual = read("visual-prompt.js")
+
+    required_snippets = [
+        (listen, 'bar.classList.toggle("hidden-by-mode", !isEasy)', "Listen bar chưa có Easy-only guard"),
+        (tts, 'if(!isEasy)', "Local TTS chưa có Easy-only guard"),
+        (smart, 'bar.classList.toggle("hidden-by-mode", !isEasy)', "Smart Review chưa có Easy-only guard"),
+        (visual, 'if(currentMode !== "easy")', "Visual chưa có Easy-only guard"),
+    ]
+    for source, snippet, message in required_snippets:
+        if snippet not in source:
+            fail(message)
+    ok("Easy-only UI/runtime guards tồn tại")
 
 
 def parse_object_freeze_map(path: str, variable: str) -> dict[str, str]:
@@ -120,6 +152,8 @@ def check_tools() -> None:
 
 def main() -> int:
     check_script_refs()
+    check_styles()
+    check_easy_scope_guards()
     codes = extract_visual_codes()
     check_twemoji_manifest(codes)
     check_tts_manifest()
