@@ -1,0 +1,36 @@
+name: Verify go-chu-ver2
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile Python tools
+        run: |
+          python -m py_compile tools/render_google_tts.py
+          python -m py_compile tools/vendor_twemoji.py
+          python -m py_compile tools/verify_repository.py
+
+      - name: Static repository verification
+        run: python tools/verify_repository.py
+
+      - name: Twemoji dry run
+        run: python tools/vendor_twemoji.py --dry-run
+
+      - name: Google TTS dry run
+        run: python tools/render_google_tts.py --dry-run --limit 5
