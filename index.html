@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Bé tập gõ chữ</title>
+<link rel="icon" type="image/png" href="../IMG/Icon_133.png">
+<link rel="shortcut icon" type="image/png" href="../IMG/Icon_133.png">
+<link rel="apple-touch-icon" href="../IMG/Icon_133.png">
+<link rel="stylesheet" href="styles.css">
+
+
+</head>
+
+<body>
+
+<div class="container">
+
+<div id="topBar">
+    <h1><span class="ui-icon title-icon" style="--ui-icon-url: url('../IMG/Icon_135.png')" aria-hidden="true"></span>Bé tập gõ chữ</h1>
+
+    <div class="mode-row">
+        <button class="mode-btn" data-mode="easy" onclick="handleModeClick('easy')"><span class="mode-btn-label"><span class="ui-icon" style="--ui-icon-url: url('../IMG/Icon_62.png')" aria-hidden="true"></span>Đơn giản</span><span class="mode-arrow-hit" aria-hidden="true" onclick="event.stopPropagation(); toggleModeExpand()"></span></button>
+        <button class="mode-btn" data-mode="hard" onclick="handleModeClick('hard')"><span class="mode-btn-label"><span class="ui-icon" style="--ui-icon-url: url('../IMG/Icon_70.png')" aria-hidden="true"></span>Nâng cao</span><span class="mode-arrow-hit" aria-hidden="true" onclick="event.stopPropagation(); toggleModeExpand()"></span></button>
+        <button class="mode-btn" data-mode="free" onclick="handleModeClick('free')"><span class="mode-btn-label"><span class="ui-icon" style="--ui-icon-url: url('../IMG/Icon_66.png')" aria-hidden="true"></span>Tự do</span><span class="mode-arrow-hit" aria-hidden="true" onclick="event.stopPropagation(); toggleModeExpand()"></span></button>
+    </div>
+</div>
+
+<div class="mode-panel" id="normalPanel">
+    <div id="text"></div>
+
+    <input type="text" class="typing-input" id="input" placeholder="Gõ ở đây..." />
+
+    <div class="next-wrap">
+        <button id="nextBtn" onclick="checkNext()">Tiếp theo</button>
+    </div>
+
+    <div id="result"></div>
+</div>
+
+<div class="mode-panel free-panel free-setup-panel hidden" id="freeSetupPanel">
+    <div class="free-controls">
+        <label for="poemSelect">Chọn bài/đoạn có sẵn:</label>
+        <div class="free-select-wrap">
+            <span id="freePoemIcon" class="free-poem-icon" aria-hidden="true"></span>
+            <button id="poemSelectTrigger" class="free-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="poemSelectMenu">
+                <span id="poemSelectTriggerText" class="free-select-trigger-text">Chọn bài luyện gõ</span>
+                <span class="free-select-caret" aria-hidden="true">▾</span>
+            </button>
+            <div id="poemSelectMenu" class="free-select-menu hidden" role="listbox" aria-label="Danh sách bài luyện gõ"></div>
+            <select id="poemSelect" class="free-select free-select-native" tabindex="-1" aria-hidden="true"></select>
+        </div>
+
+        <label for="freeSource">Hoặc nhập đoạn văn/bài thơ của bạn:</label>
+        <textarea id="freeSource" class="free-textarea" placeholder="Ví dụ: Hôm nay bé tập gõ chữ thật chăm..."></textarea>
+
+        <button class="free-btn" onclick="applyFreeTarget()"><span class="ui-icon free-btn-icon" style="--ui-icon-url: url('../IMG/gochu_tudo (58).png')" aria-hidden="true"></span>Dùng đoạn này để luyện gõ</button>
+    </div>
+</div>
+
+<div class="mode-panel free-panel hidden" id="freePanel">
+    <div class="free-display" id="freeDisplayBox">
+        <div class="free-display-label"><span id="freePoemViewIcon" class="free-poem-view-icon" aria-hidden="true"></span>Đoạn cần gõ:</div>
+        <div id="freeTextDisplay"></div>
+    </div>
+
+    <div class="free-input-only">
+        <textarea id="freeInput" class="free-input" placeholder="Gõ lại nguyên đoạn ở trên..."></textarea>
+    </div>
+</div>
+
+</div>
+
+<div class="study-hud">
+    <div class="hud-top">
+        <button id="game-menu" class="hud-icon-btn" type="button" onclick="toggleGameSelector()" aria-label="Mở menu chuyển chế độ" title="Menu chuyển chế độ">☰</button>
+        <span id="studyTime" class="study-time-text">00:00:00</span>
+        <button id="settingsToggleBtn" class="hud-icon-btn" type="button" aria-label="Cài đặt">⚙</button>
+    </div>
+    <div id="settingsPanel" class="settings-panel hidden">
+        <label class="settings-item" for="caseSensitiveToggle">
+            <input id="caseSensitiveToggle" type="checkbox" />
+            Phân biệt hoa và thường
+        </label>
+
+        <label class="settings-item" for="lowVolumeToggle">
+            <input id="lowVolumeToggle" type="checkbox" />
+            Giảm âm thanh
+        </label>
+
+        <div class="volume-row">
+            <div class="volume-header">
+                <label class="settings-item" for="volumeRange">Âm lượng</label>
+                <span id="volumeValue" class="settings-value">100%</span>
+            </div>
+            <input id="volumeRange" class="settings-range" type="range" min="0" max="100" step="1" value="100" />
+        </div>
+
+        <label class="settings-item" for="musicSelect">Đổi nhạc nền</label>
+        <select id="musicSelect" class="settings-select">
+            <option value="auto">🎵 Tự động luân phiên</option>
+            <option value="0">🎵 background Music1.mp3</option>
+            <option value="1">🎵 background Music2.mp3</option>
+        </select>
+    </div>
+</div>
+
+<div id="game-selector-overlay" class="hidden" onclick="hideGameSelector()">
+    <div class="game-selector-card" onclick="event.stopPropagation()">
+        <h3>🌟 Chuyển chế độ</h3>
+        <p>Chọn màn hình muốn quay về:</p>
+
+        <button class="game-nav-btn" type="button" onclick="window.location.href='../main.html'">🏠 Menu tổng</button>
+        <button class="game-nav-btn" type="button" onclick="window.location.href='../toán chơi.html'">🚀 Toán chơi</button>
+        <button class="game-nav-btn" type="button" onclick="window.location.href='../toan-do-nang-cao/index.html'">🧠 Toán đố nâng cao</button>
+        <button class="game-nav-btn" type="button" onclick="window.location.href='../tu tiên.html'">⚔️ Tu tiên</button>
+        <button class="game-nav-btn secondary" type="button" onclick="hideGameSelector()">Đóng</button>
+    </div>
+</div>
+
+<div id="floatingActions" class="floating-actions hidden">
+    <button id="floatingBackBtn" class="floating-action-btn" onclick="backFromFreePractice()" aria-label="Quay lại">↩</button>
+    <button id="floatingSubmitBtn" class="floating-action-btn submit" onclick="submitFreeAnswer()" aria-label="Nộp bài">✓</button>
+    <button id="floatingNextBtn" class="floating-action-btn next" onclick="nextFreePoem()" aria-label="Bài kế tiếp">→</button>
+</div>
+
+<div id="centerToast" class="center-toast" aria-live="polite"></div>
+
+<script src="data-easy.js"></script>
+<script src="data-poems.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>
