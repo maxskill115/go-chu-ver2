@@ -25,9 +25,13 @@ jobs:
           python -m py_compile tools/render_google_tts.py
           python -m py_compile tools/vendor_twemoji.py
           python -m py_compile tools/verify_repository.py
+          python -m py_compile tools/check_deploy_ready.py
 
       - name: Static repository verification
         run: python tools/verify_repository.py
+
+      - name: Deploy readiness report
+        run: python tools/check_deploy_ready.py
 
       - name: Twemoji dry run
         run: python tools/vendor_twemoji.py --dry-run

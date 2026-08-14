@@ -31,7 +31,8 @@
   - [x] Đợt 3: accessibility + keyboard navigation.
   - [x] Đợt 4: storage audit + no-op write dedupe.
   - [x] Đợt 5: asset reliability + UI fallback.
-  - [~] Đợt 6: offline visual framework + CI/static verification.
+  - [x] Đợt 6: offline visual framework + CI/static verification.
+  - [~] Đợt 7: deploy QA preparation + readiness report.
   - [ ] Vendor/commit SVG Twemoji thật.
   - [ ] Deploy QA thực tế.
 - [~] **Phase 10** — Pre-rendered Google TTS MP3.
@@ -60,7 +61,8 @@
 - Phase 9 đợt 5: PR #15 → `0e0ce0e`.
 - Phase 10 Google TTS framework: PR #17 → `b7e52fd`.
 - Handoff bookkeeping Phase 10: PR #18 → `bb6303a`.
-- Phase 9 đợt 6 offline visual/CI: branch `agent/offline-visual-ci`, PR/commit cập nhật sau merge.
+- Phase 9 đợt 6 offline visual/CI: PR #19 → `58f295d`.
+- Phase 9 đợt 7 deploy QA prep: branch `agent/deploy-qa-prep`, PR/commit cập nhật sau merge.
 
 ## 4. Hệ thống chính
 
@@ -73,7 +75,7 @@
 ### Visual
 
 - Twemoji pinned `jdecked/twemoji@17.0.3`.
-- Runtime mới ưu tiên: **local SVG → CDN → emoji**.
+- Runtime ưu tiên: **local SVG → CDN → emoji**.
 - Local manifest: `twemoji-local-manifest.js`.
 - Vendor tool: `tools/vendor_twemoji.py` / `tools/vendor_twemoji.bat`.
 - Debug: `getGoChuVisualHealth()`.
@@ -125,85 +127,94 @@ PR #15 → `0e0ce0e`.
 - `../IMG` asset chính có fallback emoji/text.
 - `ASSET_INVENTORY.md` phân loại asset ngoài repo.
 
-### Đợt 6 — Offline visual framework + CI/static verification 🟡
+### Đợt 6 — Offline visual framework + CI/static verification ✅
+PR #19 → `58f295d`.
 
-Mục tiêu: hoàn thiện các phần không cần Google credential trong lúc Phase 10 chờ người dùng render MP3.
+Scaffolding ban đầu đã vào `main` trước branch:
 
-#### Scaffolding đã vào `main`
+- `tools/vendor_twemoji.py` — `c35c53f`.
+- `twemoji-local-manifest.js` — `a98d2c5`.
+- `OFFLINE_VISUAL.md` — `853541d`.
 
-Các file khung được tạo trực tiếp trước khi branch đợt 6 được mở:
+Có một `BRANCH_MARKER.tmp` tạo nhầm rồi đã xóa ngay; không còn trong tree.
 
-- `tools/vendor_twemoji.py` — commit `c35c53f`.
-- `twemoji-local-manifest.js` — commit `a98d2c5`.
-- `OFFLINE_VISUAL.md` — commit `853541d`.
-
-Có một file `BRANCH_MARKER.tmp` tạo nhầm trong lúc chuyển tool rồi đã xóa ngay; không còn trong tree hiện tại. Từ phần runtime/CI trở đi quay lại quy trình branch/PR.
-
-#### Offline visual runtime
-
-Branch: `agent/offline-visual-ci`.
-
-`visual-prompt.js` dùng thứ tự:
+Runtime visual:
 
 ```text
-1. local SVG nếu `twemoji-local-manifest.js` có code
+1. local SVG theo manifest
 2. CDN Twemoji pinned 17.0.3
 3. emoji fallback
 ```
 
-Nếu local entry tồn tại nhưng file lỗi, chỉ thử CDN một lần rồi fallback emoji.
+`getGoChuVisualHealth()` trả version, số code, local coverage và nguồn hình hiện tại.
 
-`getGoChuVisualHealth()` trả:
+Vendor tool chỉ tải code thực sự dùng và tự sinh lại manifest.
 
-- version;
-- số code duy nhất;
-- số SVG local;
-- coverage %;
-- nguồn hình hiện tại (`local`, `cdn`, `emoji`, ...).
+CI `.github/workflows/verify.yml` đã chạy PASS trên PR #19. CI compile Python tools + static verify + Twemoji/TTS dry-run, không gọi Google API và không tải asset mạng thật.
 
-#### Vendor Twemoji
+### Đợt 7 — Deploy QA preparation 🟡
 
-`tools/vendor_twemoji.py`:
+Branch: `agent/deploy-qa-prep`.
 
-- đọc `code` duy nhất từ `visual-data.js`;
-- không tải cả bộ Twemoji;
-- tải đúng `assets/twemoji/<code>.svg` đang dùng;
-- skip file có sẵn;
-- `--force` tải đè;
-- `--dry-run` không cần network;
-- tự sinh lại `twemoji-local-manifest.js` từ file thực sự tồn tại.
+Files mới:
 
-Windows wrapper:
+- `tools/check_deploy_ready.py`.
+- `tools/serve_local.bat`.
+- `DEPLOY_QA.md`.
+
+CI được mở rộng để compile/chạy deploy readiness report.
+
+#### Local HTTP QA
+
+Windows:
 
 ```bat
-tools\vendor_twemoji.bat
+tools\serve_local.bat
 ```
 
-#### CI / static verification
+Mặc định mở:
 
-Files:
+```text
+http://127.0.0.1:8000/
+```
 
-- `.github/workflows/verify.yml`.
-- `tools/verify_repository.py`.
+Debug:
 
-CI chạy trên PR và push `main`:
+```text
+http://127.0.0.1:8000/?debug=1
+```
 
-1. Python compile renderer/vendor/verifier.
-2. Static repo verification.
-3. Twemoji vendor dry-run.
-4. Google TTS renderer dry-run 5 prompt.
+Mục đích: test bằng HTTP thật thay vì `file://`, nhất là media/path/cache.
 
-CI **không gọi Google API và không tải asset mạng thật**.
+#### Deploy readiness
 
-Static verifier kiểm tra:
+```bat
+py tools\check_deploy_ready.py
+```
 
-- mọi script local trong `index.html` tồn tại;
-- load order runtime chính;
-- Twemoji rules/manifest/path/file consistency;
-- TTS manifest provider + không có chuỗi giống Google API key phổ biến;
-- build tools bắt buộc tồn tại.
+Report:
 
-Tài liệu runtime đã cập nhật `RUNTIME_ARCHITECTURE.md`.
+- TTS local coverage / tổng `easyWords`;
+- Twemoji local coverage / tổng code dùng thực tế;
+- 4 Music/UI audio binary;
+- dependency `../IMG` của project cha;
+- CI/static verifier.
+
+Mặc định warnings không fail CI vì binary đang cố ý chờ người dùng.
+
+Release gate strict:
+
+```bat
+py tools\check_deploy_ready.py --strict
+```
+
+Chỉ dùng `--strict` khi mục tiêu đã chuyển sang standalone/offline 100%.
+
+Tài liệu `DEPLOY_QA.md` phân biệt:
+
+1. code/runtime ready;
+2. fallback-ready;
+3. offline/standalone-ready.
 
 ## 6. Phase 10 — Pre-rendered Google TTS MP3
 
@@ -241,24 +252,25 @@ MP3 thật chưa có trên remote vì cần Google Cloud project + ADC/billing/q
 
 ### Assistant có thể tiếp tục không cần người dùng
 
-1. Merge Phase 9 đợt 6 sau khi CI PASS.
+1. Merge Phase 9 đợt 7 sau khi CI PASS.
 2. Kiểm tra workflow/status sau merge.
-3. Chuẩn bị deploy QA checklist/report và static hosting notes.
-4. Rà soát mobile CSS/regression bằng static audit.
-5. Rà soát repo cho file thừa/branch thừa và dependency docs.
+3. Static audit mobile CSS/layout và duplicate/dead code risk.
+4. Rà repo cho branch/file thừa và dependency docs.
+5. Chuẩn bị release checklist cuối trước khi bật strict readiness.
 
 ### Việc chờ người dùng
 
 1. Google TTS: chạy setup, nghe sample, chốt voice/rate, render MP3 thật.
-2. Twemoji local binary: có thể chạy `tools\vendor_twemoji.bat` trên máy có mạng rồi commit SVG; runtime đã sẵn sàng dù chưa làm bước này.
-3. 4 audio UI/background gốc nếu muốn đưa binary lên remote.
+2. Twemoji binary: chạy `tools\vendor_twemoji.bat` trên máy có mạng rồi commit SVG nếu muốn offline visual 100%.
+3. Bổ sung 4 audio UI/background gốc nếu muốn standalone đầy đủ.
 
 ### Sau khi binary hoàn tất
 
-1. QA `?debug=1` với MP3 + SVG local đầy đủ.
-2. Test offline/network blocked.
-3. Test 360×640 / 390×844 / 640×360.
-4. Deploy QA thực tế.
+1. `py tools\check_deploy_ready.py --strict` phải PASS.
+2. QA `?debug=1` với MP3 + SVG local đầy đủ.
+3. Test Network Offline.
+4. Test 360×640 / 390×844 / 640×360.
+5. Deploy QA thực tế.
 
 ## 8. Tồn đọng
 
