@@ -134,13 +134,16 @@ def check_easy_startup_performance_guards() -> None:
     visual = read("visual-prompt.js")
     profile = read("profile-stats.js")
     listen = read("listen-mode.js")
+    ux = read("ux-hotfix.js")
     tts = read("tts-local.js")
+    mode_stats = read("mode-stats.js")
     asset = read("asset-reliability.js")
     startup = read("startup-performance.js")
     runtime_startup = read("startup-runtime-instrument.js")
 
     required_topic = [
         "GO_CHU_UNIQUE_EASY_PROMPTS",
+        "GO_CHU_EASY_PROMPT_SET",
         "goChuTopicNormalizeCache",
         "goChuTopicMatchCache",
         "goChuWordCountCache",
@@ -166,10 +169,15 @@ def check_easy_startup_performance_guards() -> None:
 
     if "ensureListenVoiceRuntime" not in listen:
         fail("Listen thiếu lazy voice runtime")
-    if re.search(r"refreshVoiceHotfixUI\(\);\s*$", read("ux-hotfix.js"), flags=re.M):
-        fail("Voice setting vẫn bị enumerate ngay ở startup")
+    if re.search(r"(?m)^\s*refreshVoiceHotfixUI\(\);\s*$", ux):
+        fail("Voice setting vẫn bị enumerate bằng lời gọi standalone ở startup")
     if "hasVietnameseWebVoice(refresh = false)" not in tts:
         fail("Local TTS chưa tránh query Web Speech khi inactive")
+
+    if "hydrateActiveModeStatsFromStorage" not in mode_stats:
+        fail("Mode stats chưa hydrate dữ liệu cũ mà không startup write")
+    if re.search(r"hydrateActiveModeStatsFromStorage\(\);\s*saveProfileData\(", mode_stats):
+        fail("Mode stats không được save profile ngay sau startup hydrate")
 
     if "requestIdleCallback" not in asset or "scheduleGoChuAssetReliability" not in asset:
         fail("Asset probing chưa defer tới idle")
