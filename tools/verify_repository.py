@@ -47,6 +47,9 @@ def check_script_refs() -> None:
         "tts-local.js",
         "memory-mode.js",
         "script.js",
+        "stability-fixes.js",
+        "mode-stats.js",
+        "performance-health.js",
         "debug-smoke.js",
     ]
     positions = {ref: refs.index(ref) if ref in refs else -1 for ref in required_order}
@@ -99,6 +102,26 @@ def check_easy_scope_guards() -> None:
         if snippet not in source:
             fail(message)
     ok("Easy-only UI/runtime guards tồn tại")
+
+
+def check_stability_guards() -> None:
+    script = read("script.js")
+    stability = read("stability-fixes.js")
+    performance = read("performance-health.js")
+
+    if "function requestAppFullscreen" in script or "request.call(el)" in script:
+        fail("script.js còn auto-fullscreen runtime; đây là nguồn jank/treo đã cấm")
+    if 'document.addEventListener("wheel"' in script or 'document.addEventListener("keydown", requestAppFullscreen' in script:
+        fail("script.js còn listener fullscreen/event nặng trên wheel/keydown")
+    if "requestAnimationFrame" not in script or "scheduleFreeLayoutSync" not in script or "scheduleFreeTypingState" not in script:
+        fail("Free mode chưa throttle resize/input theo animation frame")
+    if "poemSelectMenu.dataset.rendered" not in stability or "DocumentFragment" not in stability:
+        fail("Free dropdown chưa có single-render DOM guard")
+    if "--free-poem-icon-url" in stability:
+        fail("Free dropdown stability layer không được gắn ảnh nặng cho mọi option")
+    if "PerformanceObserver" not in performance or "getGoChuPerformanceHealth" not in performance:
+        fail("Thiếu performance diagnostics cho long task/runtime error")
+    ok("Freeze/stability guards tồn tại")
 
 
 def parse_object_freeze_map(path: str, variable: str) -> dict[str, str]:
@@ -155,6 +178,7 @@ def main() -> int:
     check_script_refs()
     check_styles()
     check_easy_scope_guards()
+    check_stability_guards()
     codes = extract_visual_codes()
     check_twemoji_manifest(codes)
     check_tts_manifest()
