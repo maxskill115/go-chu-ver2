@@ -2,17 +2,27 @@
 function normalizeVisualPrompt(text){
     return normalizeParagraph(String(text || ""))
         .normalize("NFC")
-        .toLocaleLowerCase("vi-VN");
+        .toLocaleLowerCase("vi-VN")
+        .trim();
+}
+
+function visualRuleMatches(rule, normalized){
+    const exact = Array.isArray(rule.exact) ? rule.exact : [];
+    const contains = Array.isArray(rule.contains) ? rule.contains : [];
+
+    if(exact.some(value => normalizeVisualPrompt(value) === normalized)) return true;
+
+    return contains.some(value => {
+        const phrase = normalizeVisualPrompt(value);
+        return phrase && normalized.includes(phrase);
+    });
 }
 
 function getPromptVisual(prompt){
     const normalized = normalizeVisualPrompt(prompt);
     if(!normalized) return null;
 
-    const rule = promptVisualRules.find(item =>
-        item.keywords.some(keyword => normalized.includes(keyword))
-    );
-
+    const rule = promptVisualRules.find(item => visualRuleMatches(item, normalized));
     if(!rule) return null;
 
     const localMap = window.GO_CHU_TWEMOJI_LOCAL || {};
@@ -66,6 +76,7 @@ function hidePromptVisual(){
 }
 
 function updatePromptVisual(prompt){
+    /* Visual chỉ thuộc Easy. Hard/Free luôn ẩn hẳn. */
     if(currentMode !== "easy"){
         hidePromptVisual();
         return;
@@ -139,4 +150,11 @@ showText = function(){
     updatePromptVisual(currentPrompt);
 };
 
+const baseSetModeForVisual = setMode;
+setMode = function(mode){
+    baseSetModeForVisual(mode);
+    updatePromptVisual(currentPrompt);
+};
+
 ensurePromptVisual();
+updatePromptVisual(currentPrompt);
