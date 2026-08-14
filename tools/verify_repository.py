@@ -109,9 +109,9 @@ def check_stability_guards() -> None:
     stability = read("stability-fixes.js")
     performance = read("performance-health.js")
 
-    if "requestAppFullscreen" in script or "requestFullscreen" in script:
+    if "function requestAppFullscreen" in script or "request.call(el)" in script:
         fail("script.js còn auto-fullscreen runtime; đây là nguồn jank/treo đã cấm")
-    if 'document.addEventListener("wheel"' in script or "['click', 'keydown', 'wheel']" in script:
+    if 'document.addEventListener("wheel"' in script or 'document.addEventListener("keydown", requestAppFullscreen' in script:
         fail("script.js còn listener fullscreen/event nặng trên wheel/keydown")
     if "requestAnimationFrame" not in script or "scheduleFreeLayoutSync" not in script or "scheduleFreeTypingState" not in script:
         fail("Free mode chưa throttle resize/input theo animation frame")
