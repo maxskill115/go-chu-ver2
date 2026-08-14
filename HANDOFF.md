@@ -37,7 +37,7 @@
 - Phase 6: PR #7 → `18552e0`.
 - Phase 7: PR #8 → `e281c40`.
 - Phase 8: PR #9 → `10d756e`.
-- Phase 9 stabilization đợt 1: branch `agent/phase9-stabilization`, PR/commit cập nhật sau khi merge.
+- Phase 9 stabilization đợt 1: PR #10 → `36d16dc`.
 
 ## 4. Các hệ thống hiện có
 
@@ -133,7 +133,7 @@ Behavior:
 
 ### Đợt 1 — Smoke test + QA checklist
 
-Đã thêm trên branch `agent/phase9-stabilization`:
+Đã merge qua PR #10 → `36d16dc`:
 
 - `debug-smoke.js`.
 - `QA_CHECKLIST.md`.
