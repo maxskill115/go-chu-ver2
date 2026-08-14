@@ -19,6 +19,15 @@ function getLocalTtsCount(){
     return Object.keys(GO_CHU_TTS_LOCAL_MANIFEST).length;
 }
 
+function getLocalTtsVolume(){
+    return typeof getListenSpeechVolume === "function" ? getListenSpeechVolume() : 1;
+}
+
+function syncLocalTtsVolume(){
+    if(!goChuTtsAudio) return;
+    goChuTtsAudio.volume = getLocalTtsVolume();
+}
+
 function stopLocalTts(){
     goChuTtsPlayToken += 1;
     if(!goChuTtsAudio) return;
@@ -47,6 +56,12 @@ function hasAnyListenSource(){
     return getLocalTtsCount() > 0 || hasVietnameseWebVoice();
 }
 
+const baseApplyAudioLevelsForLocalTts = applyAudioLevels;
+applyAudioLevels = function(){
+    baseApplyAudioLevelsForLocalTts();
+    syncLocalTtsVolume();
+};
+
 const baseSpeakPromptForLocalTts = speakPrompt;
 
 function speakWithWebFallback(text){
@@ -72,12 +87,10 @@ function playLocalTts(text){
     const audio = new Audio(path);
     goChuTtsAudio = audio;
     audio.preload = "auto";
-    audio.volume = typeof getListenSpeechVolume === "function" ? getListenSpeechVolume() : 1;
+    audio.volume = getLocalTtsVolume();
 
-    let settled = false;
-    const fallback = () => {
-        if(settled || token !== goChuTtsPlayToken) return;
-        settled = true;
+    const fallbackMissingFile = () => {
+        if(token !== goChuTtsPlayToken) return;
         GO_CHU_TTS_MISSING.add(path);
         try { audio.pause(); } catch (error) {}
         if(goChuTtsAudio === audio) goChuTtsAudio = null;
@@ -85,7 +98,7 @@ function playLocalTts(text){
         speakWithWebFallback(text);
     };
 
-    audio.addEventListener("error", fallback, { once: true });
+    audio.addEventListener("error", fallbackMissingFile, { once: true });
     audio.addEventListener("ended", () => {
         if(token === goChuTtsPlayToken && goChuTtsAudio === audio){
             goChuTtsAudio = null;
@@ -94,7 +107,20 @@ function playLocalTts(text){
 
     const playPromise = audio.play();
     if(playPromise && typeof playPromise.catch === "function"){
-        playPromise.catch(fallback);
+        playPromise.catch(error => {
+            if(token !== goChuTtsPlayToken) return;
+            if(goChuTtsAudio === audio) goChuTtsAudio = null;
+
+            // NotAllowedError thường là autoplay policy, không có nghĩa file MP3 bị thiếu.
+            if(error?.name === "NotAllowedError"){
+                updateListenModeBar();
+                if(typeof showCenterToast === "function"){
+                    showCenterToast("Bấm Nghe lại để phát âm thanh", "incorrect");
+                }
+                return;
+            }
+            fallbackMissingFile();
+        });
     }
 }
 
@@ -167,6 +193,12 @@ setListenMode = function(active){
     updateListenModeBar();
 
     if(listenModeActive) speakPrompt(currentPrompt);
+};
+
+const baseSetModeForLocalTts = setMode;
+setMode = function(mode){
+    if(mode !== "easy") stopAllListenAudio();
+    return baseSetModeForLocalTts(mode);
 };
 
 function refreshLocalTtsSettingsHint(){
