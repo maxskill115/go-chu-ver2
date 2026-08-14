@@ -121,6 +121,27 @@ function runGoChuSmokeTests(){
         test("Accessibility semantics", false, error.message);
     }
 
+    try {
+        test("Storage health API tồn tại", typeof getGoChuStorageHealth === "function" && typeof printGoChuStorageHealth === "function");
+        const report = getGoChuStorageHealth();
+        test("Storage report hợp lệ", Number.isFinite(report.totalBytes) && report.totalBytes >= 0 && Array.isArray(report.largestKeys), `${report.totalKB} KB`);
+        test("Storage report thấy profile", report.profileCount >= 1 && report.profileKeyCount >= 1, `${report.profileCount} profile / ${report.profileKeyCount} key`);
+
+        const skipBefore = Number(goChuStorageMetrics?.profileWriteSkips || 0);
+        saveProfileData(activeProfileId, activeProfileData);
+        saveProfileData(activeProfileId, activeProfileData);
+        const skipAfter = Number(goChuStorageMetrics?.profileWriteSkips || 0);
+        test("No-op profile save được skip", skipAfter > skipBefore, `${skipBefore} → ${skipAfter}`);
+
+        const registrySkipBefore = Number(goChuStorageMetrics?.registryWriteSkips || 0);
+        saveProfilesRegistry();
+        saveProfilesRegistry();
+        const registrySkipAfter = Number(goChuStorageMetrics?.registryWriteSkips || 0);
+        test("No-op registry save được skip", registrySkipAfter > registrySkipBefore, `${registrySkipBefore} → ${registrySkipAfter}`);
+    } catch (error) {
+        test("Storage health/dedupe", false, error.message);
+    }
+
     const passed = results.filter(item => item.pass).length;
     const failed = results.length - passed;
 
