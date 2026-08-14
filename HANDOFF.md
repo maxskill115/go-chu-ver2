@@ -40,6 +40,8 @@ Web HTML/CSS/JS thuần cho bé luyện **đọc → gõ → sửa lỗi → ôn
 - [x] Đợt 8 — UI scope + visual accuracy + regression guards.
 - [x] Đợt 9 — visual mapping round 2.
 - [x] **Đợt 10 — freeze/stability audit + runtime diagnostics.**
+- [ ] **Đợt 11 — Easy startup performance rewrite.**
+- [ ] **Đợt 12 — Responsive UI redesign PC/mobile.**
 - [ ] Vendor/commit SVG Twemoji thật nếu muốn offline visual 100%.
 - [ ] Deploy QA thực tế sau khi binary hoàn tất.
 
@@ -166,62 +168,11 @@ wheel
 
 ### Fix đã merge
 
-#### 1. Bỏ auto-fullscreen hoàn toàn
-
-- Xóa `requestAppFullscreen()` khỏi runtime.
-- Xóa listener toàn cục `click/keydown/wheel` dùng fullscreen.
-- Nếu sau này cần fullscreen phải thêm nút riêng do người dùng chủ động bấm.
-
-#### 2. Throttle Free resize/input
-
-`script.js`:
-
-- resize Free mode đi qua `scheduleFreeLayoutSync()`.
-- input Free đi qua `scheduleFreeTypingState()`.
-- dùng `requestAnimationFrame` để tối đa 1 update/frame, tránh mobile keyboard/resize bắn dồn event.
-
-#### 3. Giảm DOM + request ảnh ở dropdown Tự do
-
-File mới:
-
-```text
-stability-fixes.js
-```
-
-Trước đây mỗi lần mở danh sách bài:
-
-- xóa menu cũ;
-- tạo lại khoảng 58 button;
-- mỗi option mang một `../IMG/gochu_tudo (...).png`.
-
-Fix:
-
-- render menu một lần;
-- dùng `DocumentFragment`;
-- option danh sách dùng emoji nhẹ `📖 / ✍️`;
-- chỉ item đang chọn bên ngoài menu giữ ảnh thật;
-- tránh hàng chục request ảnh mỗi lần mở dropdown.
-
-#### 4. Cleanup khi pagehide
-
-`stability-fixes.js` dọn các timeout/audio transient khi trang rời vòng đời.
-
-#### 5. Performance diagnostics
-
-File mới:
-
-```text
-performance-health.js
-```
-
-Theo dõi:
-
-- Long Tasks API nếu browser hỗ trợ;
-- số long task;
-- tổng/max/average duration;
-- runtime `error`;
-- `unhandledrejection`;
-- giữ tối đa 20 record gần nhất.
+- Xóa auto-fullscreen runtime.
+- Throttle Free resize/input bằng `requestAnimationFrame`.
+- Free dropdown render một lần, bỏ tải hàng chục ảnh thumbnail mỗi lần mở.
+- Cleanup transient timer/audio khi `pagehide`.
+- Thêm `performance-health.js` theo dõi Long Task, runtime error và unhandled rejection.
 
 Debug:
 
@@ -230,18 +181,7 @@ getGoChuPerformanceHealth()
 printGoChuPerformanceHealth()
 ```
 
-#### 6. Regression guard
-
-`tools/verify_repository.py` fail nếu:
-
-- auto-fullscreen runtime quay lại `script.js`;
-- listener nặng trên `wheel/keydown` quay lại;
-- Free resize/input mất rAF throttle;
-- Free dropdown mất single-render guard;
-- dropdown lại gắn ảnh nặng cho mọi option;
-- performance diagnostics bị xóa.
-
-### Invariant stability mới
+### Invariant stability
 
 ```text
 Không tự request fullscreen từ global interaction.
@@ -252,7 +192,308 @@ Nếu còn treo phải có performance/error diagnostics để lần ra nguyên 
 
 ---
 
-## 7. CI / regression guard
+## 7. Plan Phase 9 đợt 11 — Easy startup performance rewrite
+
+### Vấn đề mới được xác nhận từ sử dụng thực tế
+
+Người dùng báo **vừa vào web ở mode Đơn giản đã lag rất mạnh, gần như treo máy**, dù auto-fullscreen đã được loại bỏ.
+
+Audit kiến trúc cho thấy Easy hiện là mode nặng nhất vì một lần `showText()` phải đi qua nhiều wrapper nối tiếp:
+
+```text
+script-core
+→ smart-review
+→ visual-prompt
+→ listen-mode
+→ memory-mode
+→ topic-level
+→ vietnamese-input
+→ mode-stats
+```
+
+Ngoài ra `setMode("easy")` cũng kích hoạt nhiều lớp UI/state ngay khi trang vừa load.
+
+### Mục tiêu đợt 11
+
+**Ưu tiên hiệu năng trước khi redesign UI. Không redesign trên nền runtime đang lag.**
+
+#### 11.1 Đo startup thật
+
+Bổ sung marker:
+
+```text
+navigation/start
+profile init
+Easy pool build
+setMode easy
+showText chain
+first input ready
+first visual ready
+```
+
+Mục tiêu có số đo ms cụ thể thay vì chỉ Long Task tổng quát.
+
+#### 11.2 Tách render prompt khỏi side-effect
+
+Không để mọi module bọc `showText()` nối dây dài mãi.
+
+Plan:
+
+```text
+renderPromptCore()
+→ render chữ + reset input/result
+
+refreshEasyUiDeferred()
+→ topic/review/visual/guide
+→ chạy sau first paint
+```
+
+Các tính năng không cần cho frame đầu sẽ chạy `requestAnimationFrame`/idle sau khi input đã usable.
+
+#### 11.3 Easy first-paint tối thiểu
+
+Khi vào web, frame đầu chỉ cần:
+
+```text
+mode button
+prompt chữ
+input
+nút Tiếp theo
+```
+
+Không block first paint vì:
+
+- visual/CDN;
+- dashboard stats;
+- asset probing;
+- Listen voice discovery;
+- Memory controls;
+- Smart Review count;
+- Topic summary text.
+
+#### 11.4 Lazy-init Easy tools
+
+- Listen/TTS: chỉ initialize khi bé bấm `Nghe rồi gõ`.
+- Memory: chỉ initialize countdown/control khi bấm `Nhớ rồi gõ`.
+- Dashboard: chỉ render nội dung chi tiết khi mở dashboard.
+- Asset probe: defer sau first interaction/idle.
+- Visual: render sau prompt text, có timeout/network fallback độc lập.
+- Smart Review summary: tính sau prompt render, không block input.
+
+#### 11.5 Cache dữ liệu tính toán
+
+- cache normalized Easy prompt;
+- cache word count;
+- cache topic membership;
+- cache visual-rule match;
+- không scan toàn bộ `easyWords`/topic rule lặp lại mỗi `showText()` nếu dữ liệu không đổi.
+
+#### 11.6 Giảm localStorage synchronous work
+
+- không serialize profile ngay trong hot path `showText()`/input;
+- gom write theo dirty queue;
+- flush theo interval/pagehide;
+- dashboard đóng thì không render dashboard DOM khi stats thay đổi.
+
+#### 11.7 Performance gate
+
+Trước khi merge đợt 11:
+
+```text
+Easy first input ready: mục tiêu < 150 ms desktop, < 300 ms mobile tầm trung
+showText normal: mục tiêu không có Long Task > 50 ms
+không có network request nào được phép block input
+```
+
+Nếu không đạt, chưa chuyển sang redesign UI.
+
+---
+
+## 8. Plan Phase 9 đợt 12 — Responsive UI redesign PC/mobile
+
+### Nhận xét từ screenshot hiện tại
+
+- PC: khung chính quá hẹp so với màn hình nhưng lại quá cao; nhiều panel xếp dọc gây cuộn.
+- Prompt bị đẩy lên/xuống khi toolbar thay đổi trạng thái.
+- Topic/Level, Listen, Memory, Review đang chiếm gần bằng vùng học chính.
+- Kết quả sai xuất hiện thành card rất cao, làm layout nhảy mạnh.
+- HUD trái/phải và timer đang tách khỏi khung chính, thiếu hệ thống phân cấp thị giác.
+- Dashboard tốt về dữ liệu nhưng dài, phải cuộn rất nhiều và có nested scroll.
+- Mobile sẽ nghiêm trọng hơn vì các toolbar hiện thiên về desktop horizontal controls.
+
+### Nguyên tắc redesign
+
+```text
+Prompt + input là trung tâm.
+Tool phụ phải compact/collapsible.
+Không để kết quả sai làm nhảy toàn bộ layout.
+PC tận dụng chiều ngang.
+Mobile ưu tiên 1 tay, ít cuộn, input luôn gần prompt.
+```
+
+### 12.1 Kiến trúc màn hình học mới
+
+#### PC >= 1024px
+
+```text
+┌ Top utility: Menu | Profile | Timer | Settings ┐
+│                                                │
+│             Bé tập gõ chữ                     │
+│       [Đơn giản] [Nâng cao] [Tự do]            │
+│                                                │
+│        PROMPT / VISUAL                         │
+│                                                │
+│  [Chủ đề] [Cấp độ]   [Nghe] [Nhớ] [Ôn lại]    │
+│                                                │
+│              INPUT                             │
+│           [ Tiếp theo ]                        │
+│                                                │
+│     Feedback compact / fixed-height area       │
+└────────────────────────────────────────────────┘
+```
+
+Các tool Easy chuyển từ **3 panel dọc** thành **một control strip 1–2 hàng**.
+
+### 12.2 Mobile <= 767px
+
+```text
+Top: ☰   00:01:20   👤 ⚙
+
+[Đơn giản ▾]
+
+PROMPT lớn
+visual nhỏ nếu có
+
+INPUT
+[Tiếp theo]
+
+[Chủ đề] [Cấp độ]
+[🔊 Nghe] [🧠 Nhớ] [📌 Ôn]
+
+Feedback
+```
+
+- Mode selector dùng segmented dropdown/compact tabs.
+- Không hiển thị title lớn `Bé tập gõ chữ` mọi lúc trên mobile; thu thành header nhỏ sau khi bắt đầu học.
+- Input minimum 52–60px cao.
+- Nút chính full-width hoặc tối thiểu 48px touch target.
+- Tool phụ dùng bottom sheet/popover thay vì mở panel lớn trong flow.
+
+### 12.3 Prompt area ổn định chiều cao
+
+- dành sẵn vùng prompt/visual;
+- khi không có ảnh vẫn giữ baseline hợp lý nhưng không tạo khoảng trắng thừa;
+- khi highlight từ, chiều cao không đổi;
+- timer không đè lên prompt.
+
+### 12.4 Feedback sai mới
+
+Không dùng card vàng cao như hiện tại.
+
+PC:
+
+```text
+Sai: [chị] em  → Bé gõ: [12]
+```
+
+Mobile:
+
+```text
+❌ Chưa đúng
+Cần: chị em
+Gõ:   12
+```
+
+- fixed/min-height feedback zone;
+- chỉ highlight phần sai;
+- có thể thu gọn sau 2–3 giây nhưng không tự xóa thông tin khi bé đang xem.
+
+### 12.5 Easy tools mới
+
+- Topic + Level: một hàng.
+- Listen / Memory / Review: icon button compact.
+- Chỉ mở chi tiết khi active.
+- Memory `Mức/Thời gian` mở inline popover khi bật, không chiếm panel thường trực.
+- Listen `Nghe lại` chỉ xuất hiện khi Listen active.
+
+### 12.6 Dashboard redesign
+
+Desktop:
+
+```text
+Header profile
+Summary cards 4 ô
+Tabs: Tổng quan | Hay sai | Chủ đề | Chế độ | Dữ liệu
+```
+
+Mobile:
+
+- full-screen sheet;
+- summary 2 cột;
+- từng mục qua tab/accordion;
+- tránh dashboard một trang dài hàng nghìn px.
+
+### 12.7 CSS architecture
+
+Không chồng thêm một file override vô tận.
+
+Plan:
+
+```text
+styles.css            → tokens/base
+layout.css            → app shell/responsive grid
+components.css        → buttons/input/panels
+mode-easy.css         → Easy-only UI
+profile-dashboard.css → dashboard
+```
+
+Giữ class/id logic hiện tại nếu có thể để giảm regression JS.
+
+### 12.8 Breakpoint chính
+
+```text
+<= 480px     phone nhỏ
+481–767px    phone lớn
+768–1023px   tablet
+>= 1024px    desktop
+>= 1440px    wide desktop
+```
+
+Không thiết kế theo một kích thước ảnh duy nhất.
+
+### 12.9 QA UI bắt buộc
+
+```text
+360×640
+390×844
+430×932
+768×1024
+1366×768
+1440×900
+1920×1080
+```
+
+Test thêm zoom 125%/150% và Windows display scaling.
+
+---
+
+## 9. Thứ tự triển khai đã chốt
+
+```text
+Bước 1 — Đợt 11: fix Easy startup lag
+Bước 2 — benchmark + CI/performance gate
+Bước 3 — Đợt 12A: dựng app shell responsive
+Bước 4 — Đợt 12B: compact Easy toolbar
+Bước 5 — Đợt 12C: feedback + prompt/input area
+Bước 6 — Đợt 12D: dashboard tabs/mobile sheet
+Bước 7 — cross-device QA
+```
+
+Không làm UI redesign trước khi Easy startup đạt performance gate.
+
+---
+
+## 10. CI / regression guard
 
 `.github/workflows/verify.yml` hiện chạy:
 
@@ -265,9 +506,11 @@ Nếu còn treo phải có performance/error diagnostics để lần ra nguyên 
 
 CI đã PASS các PR #19, #20, #22, #24 và #26.
 
+Plan đợt 11 sẽ thêm performance/static guard cho Easy hot path.
+
 ---
 
-## 8. Listen / Google TTS
+## 11. Listen / Google TTS
 
 Runtime **Easy-only**:
 
@@ -289,7 +532,7 @@ MP3 thật chưa render/commit vì chờ Google Cloud account của người dù
 
 ---
 
-## 9. Visual pipeline
+## 12. Visual pipeline
 
 Twemoji pinned `jdecked/twemoji@17.0.3`.
 
@@ -310,7 +553,7 @@ getGoChuVisualHealth()
 
 ---
 
-## 10. QA / deploy
+## 13. QA / deploy
 
 Local server:
 
@@ -338,16 +581,16 @@ printGoChuPerformanceHealth()
 
 ---
 
-## 11. Việc assistant tiếp tục
+## 14. Việc assistant tiếp tục
 
-1. Nếu vẫn có treo sau PR #26, dùng diagnostics để xác định long task/error cụ thể thay vì đoán.
-2. Audit background audio lifecycle và wrapper chain nếu diagnostics còn báo long task.
-3. Rà desktop/mobile CSS và branch/file thừa.
-4. Tiếp tục giảm công việc đồng bộ trên main thread nếu profiler chỉ ra điểm nóng.
+1. Thực hiện Phase 9 đợt 11 trước: đo + giảm startup cost Easy.
+2. Chỉ khi performance gate đạt mới bắt đầu Phase 9 đợt 12 UI redesign.
+3. Sau redesign chạy QA đủ desktop/mobile breakpoint.
+4. Không chờ Google TTS/Twemoji binary để làm hai đợt này.
 
 ---
 
-## 12. Việc chờ người dùng
+## 15. Việc chờ người dùng
 
 ### Google TTS
 
@@ -369,14 +612,14 @@ tools\vendor_twemoji.bat
 
 ---
 
-## 13. Release gate cuối
+## 16. Release gate cuối
 
 1. `python tools/verify_repository.py` PASS.
-2. `python tools/check_deploy_ready.py --strict` PASS.
-3. `?debug=1` smoke PASS.
-4. Network Offline test.
-5. Desktop test.
-6. Mobile 360×640 / 390×844 / 640×360.
+2. Easy startup performance gate PASS.
+3. `python tools/check_deploy_ready.py --strict` PASS khi binary đủ.
+4. `?debug=1` smoke PASS.
+5. Network Offline test.
+6. Desktop/mobile responsive QA.
 7. Easy / Hard / Free / Listen / Memory / profile/dashboard.
 8. Local MP3 + local Twemoji thật.
 9. Deploy QA thực tế.
