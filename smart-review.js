@@ -7,6 +7,15 @@ let smartReviewActive = false;
 let smartPromptWrongRecorded = false;
 let promptStats = loadPromptStats();
 
+/* ===== PHASE 9 ĐỢT 11C - CACHE WEAK PROMPT + COALESCE UI ===== */
+let goChuPromptStatsRevision = 0;
+let goChuWeakPromptCacheStatsRef = null;
+let goChuWeakPromptCacheRevision = -1;
+let goChuWeakPromptCache = [];
+let goChuWeakPromptCacheHits = 0;
+let goChuWeakPromptCacheMisses = 0;
+let goChuSmartReviewUiFrame = 0;
+
 function loadPromptStats(){
     try {
         const raw = localStorage.getItem(GO_CHU_PROMPT_STATS_KEY);
@@ -21,6 +30,13 @@ function savePromptStats(){
     try {
         localStorage.setItem(GO_CHU_PROMPT_STATS_KEY, JSON.stringify(promptStats));
     } catch (error) {}
+}
+
+function invalidateWeakPromptCache(){
+    goChuPromptStatsRevision += 1;
+    goChuWeakPromptCacheStatsRef = null;
+    goChuWeakPromptCacheRevision = -1;
+    goChuWeakPromptCache = [];
 }
 
 function getPromptStatsEntry(prompt){
@@ -42,8 +58,9 @@ function recordPromptResult(prompt, isCorrect){
         entry.wrong += 1;
         entry.lastWrongAt = now;
     }
+    invalidateWeakPromptCache();
     savePromptStats();
-    updateSmartReviewBar();
+    scheduleSmartReviewBarUpdate();
 }
 
 function getPromptWeakness(entry){
@@ -52,10 +69,20 @@ function getPromptWeakness(entry){
 }
 
 function getWeakPromptRecords(){
+    if(
+        goChuWeakPromptCacheStatsRef === promptStats &&
+        goChuWeakPromptCacheRevision === goChuPromptStatsRevision
+    ){
+        goChuWeakPromptCacheHits += 1;
+        return goChuWeakPromptCache;
+    }
+
+    goChuWeakPromptCacheMisses += 1;
     const available = typeof GO_CHU_EASY_PROMPT_SET !== "undefined"
         ? GO_CHU_EASY_PROMPT_SET
         : new Set(easyWords);
-    return Object.entries(promptStats)
+
+    goChuWeakPromptCache = Object.entries(promptStats)
         .filter(([prompt, entry]) => available.has(prompt) && getPromptWeakness(entry) > 0)
         .map(([prompt, entry]) => ({
             prompt,
@@ -65,6 +92,10 @@ function getWeakPromptRecords(){
             lastWrongAt: entry.lastWrongAt || 0
         }))
         .sort((a, b) => b.weakness - a.weakness || b.wrong - a.wrong || b.lastWrongAt - a.lastWrongAt);
+
+    goChuWeakPromptCacheStatsRef = promptStats;
+    goChuWeakPromptCacheRevision = goChuPromptStatsRevision;
+    return goChuWeakPromptCache;
 }
 
 function findSafeSmartInsertIndex(round, prompt, preferredIndex){
@@ -154,6 +185,14 @@ function updateSmartReviewBar(){
     button.disabled = weakCount === 0;
 }
 
+function scheduleSmartReviewBarUpdate(){
+    if(goChuSmartReviewUiFrame) return;
+    goChuSmartReviewUiFrame = requestAnimationFrame(() => {
+        goChuSmartReviewUiFrame = 0;
+        updateSmartReviewBar();
+    });
+}
+
 function startSmartReview(){
     if(currentMode !== "easy") return;
     if(smartReviewActive){
@@ -173,7 +212,8 @@ function startSmartReview(){
     }
 
     smartReviewActive = true;
-    texts = plainShuffleEasyWords().filter(prompt => weakPrompts.includes(prompt));
+    const weakSet = new Set(weakPrompts);
+    texts = plainShuffleEasyWords().filter(prompt => weakSet.has(prompt));
     index = 0;
     showText();
     updateSmartReviewBar();
@@ -191,14 +231,14 @@ const baseShowTextForSmartReview = showText;
 showText = function(){
     smartPromptWrongRecorded = false;
     baseShowTextForSmartReview();
-    updateSmartReviewBar();
+    scheduleSmartReviewBarUpdate();
 };
 
 const baseSetModeForSmartReview = setMode;
 setMode = function(mode){
     if(mode !== "easy") smartReviewActive = false;
     baseSetModeForSmartReview(mode);
-    updateSmartReviewBar();
+    scheduleSmartReviewBarUpdate();
 };
 
 nextPromptForCurrentMode = function(){
@@ -253,5 +293,16 @@ checkNext = function(){
     }
 };
 
+function getGoChuSmartReviewHealth(){
+    return {
+        promptStatsRevision: goChuPromptStatsRevision,
+        weakPromptCount: getWeakPromptRecords().length,
+        weakCacheHits: goChuWeakPromptCacheHits,
+        weakCacheMisses: goChuWeakPromptCacheMisses,
+        uiUpdateScheduled: Boolean(goChuSmartReviewUiFrame)
+    };
+}
+window.getGoChuSmartReviewHealth = getGoChuSmartReviewHealth;
+
 ensureSmartReviewBar();
-updateSmartReviewBar();
+scheduleSmartReviewBarUpdate();

@@ -27,6 +27,7 @@ jobs:
           python -m py_compile tools/verify_repository.py
           python -m py_compile tools/check_deploy_ready.py
           python -m py_compile tools/verify_startup_loading.py
+          python -m py_compile tools/verify_easy_entry.py
 
       - name: Check JavaScript syntax
         run: |
@@ -37,6 +38,9 @@ jobs:
 
       - name: Startup loading verification
         run: python tools/verify_startup_loading.py
+
+      - name: Easy entry fast-path verification
+        run: python tools/verify_easy_entry.py
 
       - name: Deploy readiness report
         run: python tools/check_deploy_ready.py
