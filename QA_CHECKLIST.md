@@ -70,15 +70,18 @@ Checklist này dùng sau mỗi phase lớn hoặc trước khi deploy bản mớ
 - [ ] Đổi tên hồ sơ.
 - [ ] Chuyển hồ sơ → topic/level/Memory preferences đổi theo bé.
 - [ ] Prompt weak của Bé 1 không xuất hiện trong stats Bé 2.
+- [ ] Hard/Free stats của Bé 1 không xuất hiện trong Bé 2.
 - [ ] Không xóa được hồ sơ cuối cùng.
 - [ ] Reset chỉ xóa tiến độ hồ sơ đang active.
 - [ ] Thời gian hôm nay/tổng tăng đúng hồ sơ active.
-- [ ] Export JSON tải được.
+- [ ] Export JSON chứa cả `promptStats` và `modeStats`.
 - [ ] Import JSON có confirm và phục hồi đủ hồ sơ.
 
 ## 9. Dashboard
 
-- [ ] Tổng đúng/sai/accuracy khớp promptStats.
+- [ ] Tổng đúng/sai/accuracy = Easy + Hard + Free.
+- [ ] Mục **Theo chế độ** hiển thị riêng Đơn giản / Nâng cao / Tự do.
+- [ ] `Cần ôn` vẫn chỉ dựa trên Easy.
 - [ ] Top 10 weak prompt hiển thị đúng.
 - [ ] Topic stats không lỗi khi prompt thuộc nhiều topic.
 - [ ] `Lỗi dấu` tăng khi sai accent-only.
@@ -100,10 +103,28 @@ Checklist này dùng sau mỗi phase lớn hoặc trước khi deploy bản mớ
 
 - [ ] Chuyển Nâng cao không còn UI phụ chỉ dành Easy.
 - [ ] Nâng cao vẫn gõ/check đúng như baseline.
+- [ ] Một prompt Nâng cao sai nhiều lần chỉ tăng tối đa 1 `wrong`; đúng tăng 1 `correct`.
 - [ ] Tự do vẫn chọn bài/custom text, nộp bài và next bình thường.
+- [ ] Một target Tự do sai nhiều lần chỉ tăng tối đa 1 `wrong`; hoàn thành đúng tăng 1 `correct`.
+- [ ] Hard/Free không xuất hiện trong Smart Review hoặc Auto level Easy.
 - [ ] Profile/dashboard không làm vỡ Free mode.
 
-## 12. Mobile
+## 12. Accessibility / keyboard
+
+- [ ] Nút ⚙ có `aria-controls=settingsPanel` và `aria-expanded` đúng trạng thái.
+- [ ] Nút ☰ có `aria-controls=game-selector-overlay` và `aria-expanded` đúng trạng thái.
+- [ ] Nút 👤 có `aria-controls=profileDashboardOverlay` và `aria-expanded` đúng trạng thái.
+- [ ] `result` có `aria-live="polite"`.
+- [ ] Game selector và profile dashboard có `role="dialog"` + `aria-modal="true"`.
+- [ ] Mở dashboard → focus vào nút đóng.
+- [ ] Mở game selector → focus vào nút đầu tiên.
+- [ ] Tab / Shift+Tab không thoát khỏi modal đang mở.
+- [ ] Đóng modal → focus quay về nút đã mở modal.
+- [ ] Background không nhận focus khi modal mở (`inert`).
+- [ ] Escape vẫn đóng được dashboard / game selector.
+- [ ] `prefers-reduced-motion: reduce` làm animation/transition gần như tắt.
+
+## 13. Mobile
 
 Kiểm tra tối thiểu:
 
@@ -113,8 +134,9 @@ Kiểm tra tối thiểu:
 - [ ] Không có horizontal scroll ngoài ý muốn.
 - [ ] Input không bị control mới đẩy khỏi vùng nhìn.
 - [ ] Các nút chính có vùng bấm đủ lớn.
+- [ ] Focus outline không bị cắt khỏi viewport/modal.
 
-## 13. Smoke test dev
+## 14. Smoke test dev
 
 Mở URL với `?debug=1`, ví dụ:
 
