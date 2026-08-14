@@ -9,25 +9,13 @@ function getLocalTtsPath(text = currentPrompt){
     const key = String(text || "");
     return GO_CHU_TTS_LOCAL_MANIFEST[key] || "";
 }
-
 function hasLocalTts(text = currentPrompt){
     const path = getLocalTtsPath(text);
     return Boolean(path && !GO_CHU_TTS_MISSING.has(path));
 }
-
-function getLocalTtsCount(){
-    return Object.keys(GO_CHU_TTS_LOCAL_MANIFEST).length;
-}
-
-function getLocalTtsVolume(){
-    return typeof getListenSpeechVolume === "function" ? getListenSpeechVolume() : 1;
-}
-
-function syncLocalTtsVolume(){
-    if(!goChuTtsAudio) return;
-    goChuTtsAudio.volume = getLocalTtsVolume();
-}
-
+function getLocalTtsCount(){ return Object.keys(GO_CHU_TTS_LOCAL_MANIFEST).length; }
+function getLocalTtsVolume(){ return typeof getListenSpeechVolume === "function" ? getListenSpeechVolume() : 1; }
+function syncLocalTtsVolume(){ if(goChuTtsAudio) goChuTtsAudio.volume = getLocalTtsVolume(); }
 function stopLocalTts(){
     goChuTtsPlayToken += 1;
     if(!goChuTtsAudio) return;
@@ -39,22 +27,15 @@ function stopLocalTts(){
     } catch (error) {}
     goChuTtsAudio = null;
 }
-
 function stopAllListenAudio(){
     stopLocalTts();
     clearTimeout(listenSpeechTimer);
-    if(typeof speechSupported === "function" && speechSupported()){
-        window.speechSynthesis.cancel();
-    }
+    if(typeof speechSupported === "function" && speechSupported()) window.speechSynthesis.cancel();
 }
-
 function hasVietnameseWebVoice(){
     return Boolean(typeof refreshVietnameseVoice === "function" && refreshVietnameseVoice());
 }
-
-function hasAnyListenSource(){
-    return getLocalTtsCount() > 0 || hasVietnameseWebVoice();
-}
+function hasAnyListenSource(){ return getLocalTtsCount() > 0 || hasVietnameseWebVoice(); }
 
 const baseApplyAudioLevelsForLocalTts = applyAudioLevels;
 applyAudioLevels = function(){
@@ -63,13 +44,10 @@ applyAudioLevels = function(){
 };
 
 const baseSpeakPromptForLocalTts = speakPrompt;
-
 function speakWithWebFallback(text){
     if(!hasVietnameseWebVoice()){
         updateListenModeBar();
-        if(typeof showCenterToast === "function"){
-            showCenterToast("Chưa có MP3 cho câu này và máy không có giọng Việt dự phòng", "incorrect");
-        }
+        if(typeof showCenterToast === "function") showCenterToast("Chưa có MP3 cho câu này và máy không có giọng Việt dự phòng", "incorrect");
         return;
     }
     baseSpeakPromptForLocalTts(text);
@@ -102,9 +80,7 @@ function playLocalTts(text){
 
     audio.addEventListener("error", fallbackMissingFile, { once: true });
     audio.addEventListener("ended", () => {
-        if(token === goChuTtsPlayToken && goChuTtsAudio === audio){
-            goChuTtsAudio = null;
-        }
+        if(token === goChuTtsPlayToken && goChuTtsAudio === audio) goChuTtsAudio = null;
     }, { once: true });
 
     const playPromise = audio.play();
@@ -112,13 +88,9 @@ function playLocalTts(text){
         playPromise.catch(error => {
             if(token !== goChuTtsPlayToken) return;
             if(goChuTtsAudio === audio) goChuTtsAudio = null;
-
-            // NotAllowedError thường là autoplay policy, không có nghĩa file MP3 bị thiếu.
             if(error?.name === "NotAllowedError"){
                 updateListenModeBar();
-                if(typeof showCenterToast === "function"){
-                    showCenterToast("Bấm Nghe lại để phát âm thanh", "incorrect");
-                }
+                if(typeof showCenterToast === "function") showCenterToast("Bấm Nghe lại để phát âm thanh", "incorrect");
                 return;
             }
             fallbackMissingFile();
@@ -128,14 +100,12 @@ function playLocalTts(text){
 
 speakPrompt = function(text = currentPrompt){
     if(!listenModeActive || currentMode !== "easy" || !text) return;
-
     const value = String(text);
     if(hasLocalTts(value)){
         stopAllListenAudio();
         listenSpeechTimer = setTimeout(() => playLocalTts(value), 90);
         return;
     }
-
     stopLocalTts();
     speakWithWebFallback(value);
 };
@@ -144,26 +114,35 @@ const baseUpdateListenModeBarForLocalTts = updateListenModeBar;
 updateListenModeBar = function(){
     baseUpdateListenModeBarForLocalTts();
 
+    const bar = document.getElementById("listenModeBar");
     const toggle = document.getElementById("listenModeToggle");
     const replay = document.getElementById("listenReplayBtn");
     const status = document.getElementById("listenModeStatus");
-    if(!toggle || !replay || !status) return;
+    if(!bar || !toggle || !replay || !status) return;
 
     const isEasy = currentMode === "easy";
+    if(!isEasy){
+        bar.classList.add("hidden-by-mode");
+        bar.setAttribute("aria-hidden", "true");
+        toggle.disabled = true;
+        replay.disabled = true;
+        status.textContent = "";
+        return;
+    }
+
     const localReady = hasLocalTts(currentPrompt);
     const anyLocal = getLocalTtsCount() > 0;
     const webVoice = hasVietnameseWebVoice();
     const available = anyLocal || webVoice;
 
+    bar.classList.remove("hidden-by-mode");
+    bar.setAttribute("aria-hidden", "false");
     toggle.disabled = !available;
-    replay.disabled = !available || !listenModeActive || !isEasy;
+    replay.disabled = !available || !listenModeActive;
 
     if(!available){
         status.textContent = "Chưa có MP3 Google TTS hoặc giọng Việt dự phòng";
-        return;
-    }
-
-    if(listenModeActive && isEasy){
+    }else if(listenModeActive){
         if(localReady){
             const voiceName = GO_CHU_TTS_LOCAL_META.voice ? ` · ${GO_CHU_TTS_LOCAL_META.voice}` : "";
             status.textContent = `MP3 Google TTS${voiceName}`;
@@ -172,28 +151,24 @@ updateListenModeBar = function(){
         }else{
             status.textContent = "Thiếu MP3 cho câu hiện tại";
         }
-    }else if(anyLocal){
-        status.textContent = `${getLocalTtsCount()} câu đã có MP3 Google TTS`;
+    }else{
+        status.textContent = anyLocal ? `${getLocalTtsCount()} câu đã có MP3 Google TTS` : "";
     }
 };
 
 setListenMode = function(active){
-    if(active && currentMode !== "easy") setMode("easy");
-
-    const shouldEnable = Boolean(active && hasAnyListenSource());
+    if(active && currentMode !== "easy") return;
+    const shouldEnable = Boolean(active && currentMode === "easy" && hasAnyListenSource());
     listenModeActive = shouldEnable;
     stopAllListenAudio();
 
     if(active && !shouldEnable){
         if(typeof ensureVietnameseVoiceSetting === "function") ensureVietnameseVoiceSetting();
-        if(typeof showCenterToast === "function"){
-            showCenterToast("Chưa có MP3 Google TTS và thiết bị không có giọng Việt", "incorrect");
-        }
+        if(typeof showCenterToast === "function") showCenterToast("Chưa có MP3 Google TTS và thiết bị không có giọng Việt", "incorrect");
     }
 
     applyListenPromptVisibility();
     updateListenModeBar();
-
     if(listenModeActive) speakPrompt(currentPrompt);
 };
 
@@ -209,7 +184,6 @@ function refreshLocalTtsSettingsHint(){
     const hint = document.getElementById("viVoiceHint");
     const select = document.getElementById("viVoiceSelect");
     if(!hint) return;
-
     if(getLocalTtsCount() > 0){
         hint.textContent = `Ưu tiên ${getLocalTtsCount()} file MP3 Google TTS local. Giọng bên dưới chỉ dùng dự phòng khi thiếu MP3.`;
         if(select) select.disabled = !speechSupported() || getVietnameseVoices().length === 0;
@@ -218,11 +192,10 @@ function refreshLocalTtsSettingsHint(){
 
 function getGoChuTtsHealth(){
     const total = getLocalTtsCount();
-    const missing = GO_CHU_TTS_MISSING.size;
     return {
         source: total ? "local-mp3-first" : "web-speech-only",
         manifestCount: total,
-        runtimeMissingCount: missing,
+        runtimeMissingCount: GO_CHU_TTS_MISSING.size,
         voice: GO_CHU_TTS_LOCAL_META.voice || "",
         speakingRate: GO_CHU_TTS_LOCAL_META.speakingRate ?? null,
         generatedAt: GO_CHU_TTS_LOCAL_META.generatedAt || null,
@@ -230,7 +203,6 @@ function getGoChuTtsHealth(){
         webVoiceAvailable: hasVietnameseWebVoice()
     };
 }
-
 window.getGoChuTtsHealth = getGoChuTtsHealth;
 
 refreshLocalTtsSettingsHint();
