@@ -52,7 +52,9 @@ function getPromptWeakness(entry){
 }
 
 function getWeakPromptRecords(){
-    const available = new Set(easyWords);
+    const available = typeof GO_CHU_EASY_PROMPT_SET !== "undefined"
+        ? GO_CHU_EASY_PROMPT_SET
+        : new Set(easyWords);
     return Object.entries(promptStats)
         .filter(([prompt, entry]) => available.has(prompt) && getPromptWeakness(entry) > 0)
         .map(([prompt, entry]) => ({
