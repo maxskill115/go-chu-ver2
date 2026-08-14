@@ -141,8 +141,8 @@ updateListenModeBar = function(){
 
     const localReady = hasLocalTts(currentPrompt);
     const anyLocal = getLocalTtsCount() > 0;
-    /* Khi Listen tắt không gọi getVoices() ở mỗi showText. */
-    const webVoice = listenModeActive && hasVietnameseWebVoice(true) ? vietnameseVoice : vietnameseVoice;
+    /* UI chỉ đọc voice đã resolve; không enumerate voice trong showText/update bar. */
+    const webVoice = vietnameseVoice;
     const available = listenModeActive
         ? Boolean(localReady || webVoice)
         : Boolean(anyLocal || speechSupported());
