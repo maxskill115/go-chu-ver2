@@ -1,0 +1,60 @@
+/* ===== VER2 PHASE 3 - HÌNH + CHỮ ===== */
+.prompt-visual-wrap {
+    min-height: 122px;
+    margin: 4px 0 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.prompt-visual-wrap.hidden {
+    display: none;
+}
+
+.prompt-visual-image {
+    width: clamp(104px, 15vw, 164px);
+    height: clamp(104px, 15vw, 164px);
+    object-fit: contain;
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.2));
+}
+
+.prompt-visual-fallback {
+    font-size: clamp(72px, 12vw, 128px);
+    line-height: 1;
+}
+
+.prompt-visual-image.hidden,
+.prompt-visual-fallback.hidden {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .prompt-visual-wrap {
+        min-height: 88px;
+        margin-top: 0;
+    }
+
+    .prompt-visual-image {
+        width: clamp(82px, 23vw, 112px);
+        height: clamp(82px, 23vw, 112px);
+    }
+
+    .prompt-visual-fallback {
+        font-size: clamp(64px, 20vw, 96px);
+    }
+}
+
+@media (max-height: 620px) and (orientation: landscape) {
+    .prompt-visual-wrap {
+        min-height: 64px;
+    }
+
+    .prompt-visual-image {
+        width: 72px;
+        height: 72px;
+    }
+
+    .prompt-visual-fallback {
+        font-size: 58px;
+    }
+}

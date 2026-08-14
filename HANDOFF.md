@@ -64,10 +64,11 @@ Ghi chú repo:
 - [x] Tránh lặp lại cùng một câu ngay liên tiếp.
 
 ### Phase 3 — Ảnh + chữ
-- [ ] Hỗ trợ dữ liệu có ảnh minh họa cho từ/câu.
-- [ ] Ví dụ: ảnh con bò → `con bò` / `con bò ăn cỏ`.
-- [ ] Có fallback khi chưa có ảnh.
-- [ ] Không bắt buộc tất cả prompt phải có ảnh ngay từ đầu.
+- [x] Hỗ trợ dữ liệu có ảnh minh họa cho từ/câu.
+- [x] Ví dụ: ảnh con bò → `con bò` / `con bò ăn cỏ`.
+- [x] Có fallback khi ảnh không tải được.
+- [x] Prompt chưa có ảnh vẫn hiển thị như cũ, không chừa khung trống.
+- [x] Responsive trên mobile và landscape thấp.
 
 ### Phase 4 — Nghe rồi gõ
 - [ ] Dùng Web Speech API đọc tiếng Việt.
@@ -112,8 +113,8 @@ Ghi chú repo:
 
 1. ~~Chỉ rõ ký tự gõ sai~~ ✅
 2. ~~Random thông minh + lưu từ hay sai~~ ✅
-3. **Ảnh + chữ** ← bước tiếp theo
-4. **Nghe rồi gõ**
+3. ~~Ảnh + chữ~~ ✅
+4. **Nghe rồi gõ** ← bước tiếp theo
 5. **Đọc → nhớ → gõ**
 
 Không triển khai nhiều feature cùng lúc. Hoàn tất, kiểm tra và ghi handoff từng feature trước khi sang feature kế tiếp.
@@ -145,36 +146,48 @@ Không triển khai nhiều feature cùng lúc. Hoàn tất, kiểm tra và ghi 
 - Tạo module riêng `smart-review.js` để không trộn logic học thích nghi vào `script-core.js`.
 - Dùng key `goChuVer2.promptStats.v1` trong `localStorage` để lưu thống kê theo từng prompt.
 - Mỗi prompt lưu `correct`, `wrong`, `lastCorrectAt`, `lastWrongAt`.
-- Một prompt bị bé thử sai nhiều lần trong cùng một lượt chỉ tính **1 lần sai**, tránh làm điểm yếu tăng quá nhanh.
-- Điểm cần ôn hiện dùng công thức `wrong * 2 - correct`; khi bé gõ đúng đủ số lần, prompt tự ra khỏi nhóm yếu.
-- Random thông minh vẫn giữ toàn bộ danh sách ngẫu nhiên, nhưng chèn thêm tối đa 24 prompt yếu vào vòng học để chúng xuất hiện thường xuyên hơn.
-- Prompt được chèn thêm có khoảng cách an toàn với bản gốc; đồng thời tránh để prompt đầu vòng mới trùng prompt vừa học.
-- Thêm thanh **Ôn lại** trong chế độ Đơn giản. Khi có dữ liệu lỗi, nút hiển thị số prompt cần ôn; mỗi lượt ôn tối đa 20 prompt yếu nhất.
-- Khi hoàn thành lượt ôn, web tự quay về vòng học thường và báo `🌟 Ôn tập xong!`.
-- Dữ liệu lỗi nằm hoàn toàn trên trình duyệt hiện tại, không cần backend.
-- `localStorage` có `try/catch`; nếu trình duyệt chặn lưu, web vẫn hoạt động như chế độ random thường.
-- Thêm `smart-review.css` với layout responsive; mobile chuyển thanh ôn thành dạng dọc, nút rộng 100%.
-- `index.html` nạp module theo thứ tự: `script-core.js` → `smart-review.js` → `script.js` để module có thể mở rộng hàm hiện tại trước bước khởi tạo cuối.
-- Đã chạy `node --check smart-review.js`: đạt.
-- Phạm vi Phase 2: `smart-review.js`, `smart-review.css`, `styles.css`, `index.html`, `HANDOFF.md`.
-- Trong lúc tạo branch qua connector đã phát sinh hai branch thử chưa dùng: `agent/phase2-smart-review` và `agent/phase2-smart-review-2`; branch triển khai thực tế là `agent/phase2-smart-review-final`.
+- Một prompt bị bé thử sai nhiều lần trong cùng một lượt chỉ tính **1 lần sai**.
+- Điểm cần ôn dùng công thức `wrong * 2 - correct`; khi bé gõ đúng đủ số lần, prompt tự ra khỏi nhóm yếu.
+- Random thông minh chèn thêm tối đa 24 prompt yếu vào vòng học nhưng giữ khoảng cách an toàn và tránh lặp ngay.
+- Thêm thanh **Ôn lại**; mỗi lượt ôn tối đa 20 prompt yếu nhất.
+- Dữ liệu lỗi nằm hoàn toàn trên trình duyệt; nếu `localStorage` bị chặn, web vẫn chạy bình thường.
+- Phase 2 đã squash merge vào `main` qua PR #2, commit `11b5689`.
+- Trong lúc tạo branch qua connector đã phát sinh hai branch thử chưa dùng: `agent/phase2-smart-review` và `agent/phase2-smart-review-2`.
 
-## 7. Kế hoạch Phase 3 — Ảnh + chữ
+### 2026-08-14 — Phase 3: Ảnh + chữ
 
-Mục tiêu: giúp bé gắn chữ với hình ảnh/ý nghĩa thay vì chỉ nhìn chuỗi ký tự.
+- Tách mapping hình ra file `visual-data.js`; không sửa trực tiếp mảng `easyWords`.
+- Tạo `visual-prompt.js` để tìm hình dựa trên keyword của prompt rồi hiển thị phía trên chữ.
+- Phạm vi hiện tại gồm hơn 30 nhóm quen thuộc: mèo, chó, heo, bò, gà, vịt, cá, chim, thỏ, ngựa, khỉ, voi, kiến, dê; táo, chuối, cam, dưa hấu; sách, bút, xe đạp, xe hơi, nhà, bóng, sữa, nước, trường; mặt trời, mưa, mây, hoa, cây.
+- Phase 3 chỉ bật hình trong chế độ **Đơn giản**; Nâng cao và Tự do không đổi.
+- Prompt có keyword phù hợp dùng SVG Twemoji. Asset URL được ghim ở phiên bản `jdecked/twemoji@17.0.3`, không dùng `latest`.
+- Nếu SVG tải lỗi hoặc không có mạng, web hiển thị emoji Unicode tương ứng làm fallback.
+- Prompt không có mapping sẽ ẩn hoàn toàn vùng hình, không tạo khoảng trắng thừa.
+- Hình có `alt` để hỗ trợ accessibility.
+- CSS responsive: desktop dùng hình lớn vừa phải; mobile giảm kích thước; landscape thấp giảm thêm để không đẩy input khỏi màn hình.
+- Thêm `THIRD_PARTY.md` ghi attribution Twemoji và giấy phép graphics CC BY 4.0.
+- `index.html` nạp module theo thứ tự `visual-data.js` → `script-core.js` → `smart-review.js` → `visual-prompt.js` → `script.js`.
+- Đã chạy `node --check visual-data.js` và `node --check visual-prompt.js`: đạt.
+- Phạm vi Phase 3: `visual-data.js`, `visual-prompt.js`, `visual-prompt.css`, `styles.css`, `index.html`, `THIRD_PARTY.md`, `HANDOFF.md`.
+
+## 7. Kế hoạch Phase 4 — Nghe rồi gõ
+
+Mục tiêu: chuyển từ “nhìn rồi gõ” sang luyện nghe tiếng Việt và nhớ từ/câu.
 
 Kế hoạch triển khai:
 
-1. Thiết kế mapping ảnh theo prompt mà không phải sửa toàn bộ `easyWords` ngay lập tức.
-2. Ưu tiên một nhóm thử nghiệm nhỏ: động vật, trái cây, đồ vật quen thuộc.
-3. Khi prompt có ảnh, hiển thị ảnh phía trên chữ; prompt chưa có ảnh vẫn hiển thị như hiện tại.
-4. Ảnh phải responsive và không làm bàn phím/input bị đẩy khỏi màn hình mobile.
-5. Tách mapping ảnh thành file data riêng để sau này thêm ảnh chỉ cần bổ sung dữ liệu.
-6. Giữ random thông minh/ôn lỗi hoạt động bình thường với cả prompt có ảnh và không có ảnh.
-7. Cập nhật `HANDOFF.md` trong cùng PR của Phase 3.
+1. Tạo nút **Nghe** và lựa chọn chế độ **Nghe rồi gõ** mà không phá 3 mode hiện tại.
+2. Dùng Web Speech API (`speechSynthesis`) để đọc `currentPrompt`.
+3. Ưu tiên giọng có `lang = vi-VN`; nếu không có thì dùng giọng tiếng Việt gần nhất hoặc báo nhẹ rằng thiết bị chưa có giọng phù hợp.
+4. Trong Nghe rồi gõ, ẩn chữ prompt nhưng vẫn có thể giữ hình minh họa để bé hiểu ngữ cảnh ở mức dễ.
+5. Có nút nghe lại; chặn việc spam tạo nhiều speech queue cùng lúc bằng `speechSynthesis.cancel()` trước khi đọc mới.
+6. Random thông minh và lưu lỗi tiếp tục dùng chung, để từ nghe sai nhiều cũng quay lại ôn.
+7. Responsive trên mobile, nút nghe đủ lớn cho trẻ bấm.
+8. Cập nhật `HANDOFF.md` trong cùng PR.
 
 ## 8. Việc còn tồn đọng
 
 - Bổ sung lại các file audio binary vào remote khi có luồng upload binary phù hợp.
 - Dependency `../IMG/...` của giao diện gốc chưa được gom vào repo `go-chu-ver2`.
 - Hai branch thử của Phase 2 có thể xóa thủ công sau nếu muốn giữ danh sách branch gọn; chúng không chứa thay đổi dùng cho `main`.
+- Phase 3 hiện dùng SVG CDN để tránh phải upload binary; nếu sau này cần chạy hoàn toàn offline thì tải các SVG cần thiết về repo và đổi `GO_CHU_VISUAL_ASSET_BASE` sang đường dẫn local.
