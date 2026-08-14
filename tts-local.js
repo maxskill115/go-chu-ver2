@@ -89,8 +89,10 @@ function playLocalTts(text){
     audio.preload = "auto";
     audio.volume = getLocalTtsVolume();
 
+    let missingFallbackStarted = false;
     const fallbackMissingFile = () => {
-        if(token !== goChuTtsPlayToken) return;
+        if(missingFallbackStarted || token !== goChuTtsPlayToken) return;
+        missingFallbackStarted = true;
         GO_CHU_TTS_MISSING.add(path);
         try { audio.pause(); } catch (error) {}
         if(goChuTtsAudio === audio) goChuTtsAudio = null;
@@ -129,7 +131,7 @@ speakPrompt = function(text = currentPrompt){
 
     const value = String(text);
     if(hasLocalTts(value)){
-        clearTimeout(listenSpeechTimer);
+        stopAllListenAudio();
         listenSpeechTimer = setTimeout(() => playLocalTts(value), 90);
         return;
     }
