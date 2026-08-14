@@ -1,0 +1,86 @@
+/* ===== VER2 PHASE 8 - TIẾNG VIỆT + GỢI Ý GÕ ===== */
+.word-progress-text{
+    white-space:normal;
+}
+
+.typing-word{
+    display:inline;
+    border-radius:7px;
+    padding:1px 2px;
+    transition:color .15s ease,background .15s ease,box-shadow .15s ease;
+}
+
+.typing-word.done{
+    color:#a8efc8;
+    background:rgba(0,255,136,.08);
+}
+
+.typing-word.current{
+    color:#ffffff;
+    background:rgba(136,204,255,.08);
+    box-shadow:inset 0 -3px 0 rgba(136,204,255,.75);
+}
+
+.typing-word.current.mismatch,
+.typing-word.mismatch{
+    color:#ffd6d6;
+    background:rgba(255,77,109,.09);
+    box-shadow:inset 0 -3px 0 rgba(255,77,109,.58);
+}
+
+.typing-word.pending{
+    color:#d9e9f8;
+}
+
+/* Listen/Memory phải che cả màu riêng của span để không lộ đáp án. */
+#text.listen-prompt-hidden .typing-word,
+#text.memory-prompt-hidden .typing-word{
+    color:transparent !important;
+    background:transparent !important;
+    box-shadow:none !important;
+}
+
+.vietnamese-accent-hint{
+    margin-top:10px;
+    padding:9px 11px;
+    border-radius:10px;
+    background:rgba(74,116,150,.12);
+    border:1px solid rgba(74,116,150,.28);
+    color:#31516e;
+    font-size:15px;
+    font-weight:800;
+    line-height:1.45;
+}
+
+.input-guide-setting{
+    display:grid;
+    gap:7px;
+}
+
+.vietnamese-input-guide{
+    margin:10px 0 0;
+    padding:9px 12px;
+    border-radius:10px;
+    border:1px solid rgba(136,204,255,.28);
+    background:rgba(15,45,73,.58);
+    color:#d7eeff;
+    font-size:14px;
+    font-weight:800;
+    letter-spacing:.02em;
+    text-align:left;
+}
+
+@media (max-width:600px){
+    .typing-word{
+        padding:0 1px;
+    }
+
+    .vietnamese-input-guide{
+        font-size:13px;
+        padding:8px 10px;
+    }
+
+    .vietnamese-accent-hint{
+        font-size:14px;
+    }
+}

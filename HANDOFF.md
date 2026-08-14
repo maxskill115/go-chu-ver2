@@ -2,7 +2,7 @@
 
 ## 1. Mục tiêu dự án
 
-`go-chu-ver2` là web HTML/CSS/JS thuần để bé luyện **đọc → gõ → sửa lỗi → ôn lại → nghe → nhớ**, có chủ đề, độ khó thích nghi và hồ sơ riêng từng bé.
+`go-chu-ver2` là web HTML/CSS/JS thuần để bé luyện **đọc → gõ → sửa lỗi → ôn lại → nghe → nhớ**, có chủ đề, độ khó thích nghi, hồ sơ riêng từng bé và hỗ trợ học gõ tiếng Việt.
 
 ### Nguyên tắc bắt buộc
 
@@ -13,183 +13,160 @@
 - Không thay đổi hành vi mode không liên quan.
 - UI mới phải dùng tốt trên desktop + mobile.
 
-## 2. Baseline
-
-Nguồn ban đầu: bản người dùng cung cấp ngày 2026-08-14.
-
-Baseline có Đơn giản / Nâng cao / Tự do, kho từ/câu, random, âm click/đúng/nhạc nền, bộ đếm thời gian và settings.
-
-Tồn đọng baseline:
-
-- Binary audio gốc chưa được đưa lên remote bằng connector; code vẫn giữ đường dẫn.
-- Một số icon UI gốc vẫn tham chiếu `../IMG/...` ngoài repo.
-
-## 3. Roadmap
+## 2. Roadmap trạng thái
 
 ### Phase 0 — Khởi tạo ver2 ✅
 - [x] Repo `maxskill115/go-chu-ver2`.
 - [x] Baseline lên `main`.
-- [x] Quy ước HANDOFF bắt buộc.
+- [x] HANDOFF bắt buộc.
 
-### Phase 1 — Phản hồi lỗi khi gõ ✅
-- [x] Levenshtein căn đúng sai/thừa/thiếu.
-- [x] Thiếu 1 ký tự không làm phần sau sai hàng loạt.
-- [x] Hotfix: bỏ ô đỏ dày đặc, bỏ `SP`, chỉ nhấn nhẹ phần sai.
+### Phase 1 — Phản hồi lỗi ✅
+- [x] Levenshtein căn sai/thừa/thiếu.
+- [x] Không cascade lỗi khi thiếu ký tự.
+- [x] Hotfix bỏ ô đỏ dày đặc và `SP`.
 
 ### Phase 2 — Random thông minh + ôn lỗi ✅
-- [x] Prompt stats bằng `localStorage`.
-- [x] Prompt yếu xuất hiện lại nhiều hơn.
-- [x] Nút **Ôn lại**.
-- [x] Không lặp prompt ngay liên tiếp.
+- [x] Prompt stats.
+- [x] Weight prompt yếu.
+- [x] **Ôn lại**.
+- [x] Không lặp ngay liên tiếp.
 
 ### Phase 3 — Ảnh + chữ ✅
 - [x] Mapping ảnh riêng.
 - [x] Hơn 30 nhóm có minh họa.
-- [x] Fallback emoji khi SVG lỗi/mất mạng.
-- [x] Responsive.
+- [x] Fallback emoji.
 
 ### Phase 4 — Nghe rồi gõ ✅
 - [x] Web Speech API.
-- [x] Chỉ dùng voice `vi-*`, không fallback sang ngôn ngữ sai.
-- [x] Chọn giọng Việt trong Settings.
-- [x] **Nghe rồi gõ / Hiện chữ / Nghe lại**.
+- [x] Chỉ voice `vi-*`.
+- [x] Chọn voice Việt.
+- [x] Nghe rồi gõ / Hiện chữ / Nghe lại.
 
 ### Phase 5 — Nhớ rồi gõ ✅
-- [x] Prompt 2 / 3 / 4 từ.
-- [x] Thời gian nhìn 3 / 5 / 7 giây.
-- [x] Khóa input khi đang nhìn; hết giờ mới cho gõ.
-- [x] Giữ hình làm gợi ý ngữ cảnh.
-- [x] Loại trừ với Nghe rồi gõ.
+- [x] 2 / 3 / 4 từ.
+- [x] 3 / 5 / 7 giây.
+- [x] Che chữ rồi mới mở input.
+- [x] Không chồng Listen Mode.
 
-### Phase 6 — Chủ đề và cấp độ ✅
-- [x] Tất cả / Động vật / Gia đình / Đồ ăn / Thiên nhiên / Trường học / Đồ vật / Cơ thể / Màu sắc / Cảm xúc.
-- [x] Filter dùng chung học thường / Listen / Memory.
+### Phase 6 — Chủ đề + cấp độ ✅
+- [x] 10 lựa chọn chủ đề.
 - [x] Auto / 1 / 2 / 3 / 4 từ.
-- [x] Auto tăng giảm bảo thủ theo kết quả học.
-- [x] Phụ huynh có thể khóa mức.
-- [x] Topic/level lưu localStorage.
+- [x] Filter dùng chung normal / Listen / Memory.
+- [x] Auto difficulty bảo thủ.
 
-### Phase 7 — Thống kê và hồ sơ bé ✅
-- [x] Hồ sơ mặc định **Bé 1**.
-- [x] Thêm / đổi tên / xóa hồ sơ; không xóa hồ sơ cuối cùng.
-- [x] Prompt stats riêng từng bé.
-- [x] Chủ đề/cấp độ/Memory settings riêng từng bé.
-- [x] Thời gian học hôm nay + tổng thời gian riêng từng bé.
-- [x] Dashboard tổng lượt, đúng/sai, accuracy, cần ôn.
-- [x] Top 10 prompt hay sai.
-- [x] Thống kê theo chủ đề.
-- [x] Reset chỉ hồ sơ hiện tại.
-- [x] Export/import JSON backup toàn bộ hồ sơ.
-- [x] Chuyển hồ sơ không reload trang.
-- [x] Dashboard đóng/mở, không chiếm màn học bình thường.
-- [x] Responsive desktop/mobile.
+### Phase 7 — Hồ sơ + thống kê ✅
+- [x] Nhiều hồ sơ bé.
+- [x] Progress riêng từng bé.
+- [x] Thời gian hôm nay/tổng.
+- [x] Top prompt yếu + thống kê chủ đề.
+- [x] Reset riêng hồ sơ.
+- [x] Export/import JSON.
 
-**Giới hạn Phase 7 hiện tại:** prompt stats được Phase 2 ghi cho luồng **Đơn giản**, bao gồm Listen/Memory. Nâng cao và Tự do chưa được đưa vào adaptive prompt stats; dashboard prompt/accuracy hiện dựa trên dữ liệu này. Thời gian học vẫn được ghi chung khi hồ sơ đang active.
+**Giới hạn:** adaptive prompt stats hiện tập trung ở Đơn giản + Listen/Memory. Nâng cao/Tự do chưa có adaptive prompt stats theo prompt.
 
-### Phase 8 — Hỗ trợ tiếng Việt và bàn phím
-- [ ] Highlight tiến độ theo từng từ khi đọc/gõ.
-- [ ] Nhận biết lỗi dấu tiếng Việt rõ hơn.
-- [ ] Gợi ý phím cần gõ.
-- [ ] Hướng dẫn Telex/VNI tùy chọn.
-- [ ] Không biến thành bàn phím ảo rối mắt.
+### Phase 8 — Tiếng Việt + gợi ý bàn phím ✅
+- [x] Progress trực quan theo **từng từ**, không dựng ô ký tự.
+- [x] Từ đã đúng nhấn nhẹ, từ đang gõ underline, từ sai hiện underline đỏ nhẹ.
+- [x] Nhận biết trường hợp **đúng chữ gốc nhưng sai dấu/chữ tiếng Việt**.
+- [x] Ví dụ phản hồi: `meo → mèo`, `di → đi`.
+- [x] Ghi `accentErrors` vào chính entry promptStats, không phá schema cũ.
+- [x] Dashboard có thêm tổng **Lỗi dấu**.
+- [x] Hướng dẫn tiếng Việt mặc định **Tắt**.
+- [x] Tùy chọn **Telex / VNI / Tắt** trong Settings.
+- [x] Gợi ý chỉ một dòng cho từ hiện tại, ví dụ `bé → bes` / `bé → be1`.
+- [x] Không can thiệp bộ gõ/IME của hệ điều hành.
+- [x] Tôn trọng composition events.
+- [x] Gợi ý tự ẩn trong Listen/Memory để không lộ đáp án.
+- [x] Responsive mobile.
 
-## 4. Nhật ký kỹ thuật
+## 3. PR / commit chính
 
-### 2026-08-14 — Khởi tạo
-- Tạo repo `go-chu-ver2`.
-- GitHub App ban đầu 403; người dùng cấp lại Contents write và ghi thành công.
+- Phase 1: PR #1 → `1e8450b`.
+- Phase 2: PR #2 → `11b5689`.
+- Phase 3: PR #3 → `e0fe068`.
+- Phase 4: PR #4 → `6cc6b00`.
+- Hotfix UX/voice: PR #5 → `26cdb63`.
+- Phase 5: PR #6 → `daecd42`.
+- Phase 6: PR #7 → `18552e0`.
+- Phase 7: PR #8 → `e281c40`.
+- Phase 8: PR/commit sẽ cập nhật sau khi merge branch hiện tại.
 
-### Phase 1
-- PR #1 → squash `1e8450b`.
-- Levenshtein diff.
+## 4. Chi tiết kỹ thuật đang dùng
 
-### Phase 2
-- PR #2 → squash `11b5689`.
-- Key legacy stats: `goChuVer2.promptStats.v1`.
-- Prompt: `correct`, `wrong`, `lastCorrectAt`, `lastWrongAt`.
+### Smart review
+- Legacy key: `goChuVer2.promptStats.v1`.
+- Entry: `correct`, `wrong`, `lastCorrectAt`, `lastWrongAt`.
+- Phase 8 bổ sung không phá tương thích: `accentErrors`, `lastAccentErrorAt`.
 - Weakness: `wrong * 2 - correct`.
 
-### Phase 3
-- PR #3 → squash `e0fe068`.
-- `visual-data.js`, `visual-prompt.js/css`.
-- Twemoji pinned `jdecked/twemoji@17.0.3`, attribution trong `THIRD_PARTY.md`.
+### Voice
+- `goChuVer2.viVoice.v1`.
+- Chỉ nhận voice `lang` bắt đầu bằng `vi`.
+- Rate hiện tại `0.76`.
 
-### Phase 4
-- PR #4 → squash `6cc6b00`.
-- `listen-mode.js/css`.
+### Memory
+- Legacy/global trước profile: `goChuVer2.memoryWords.v1`, `goChuVer2.memorySeconds.v1`.
+- Sau Phase 7 các giá trị này được route vào preferences hồ sơ active.
 
-### Hotfix UX + voice
-- PR #5 → squash `26cdb63`.
-- `ux-hotfix.js/css`.
-- Key voice: `goChuVer2.viVoice.v1`.
-- Speech rate 0.76.
-
-### Phase 5
-- PR #6 → squash `daecd42`.
-- `memory-mode.js/css`.
-- Keys: `goChuVer2.memoryWords.v1`, `goChuVer2.memorySeconds.v1` (legacy/global trước Phase 7).
-
-### Phase 6
-- PR #7 → squash `18552e0`.
-- `topic-data.js`, `topic-level.js/css`.
-- Keys legacy/global trước Phase 7: `goChuVer2.topic.v1`, `goChuVer2.level.v1`.
+### Topic/level
+- Legacy/global: `goChuVer2.topic.v1`, `goChuVer2.level.v1`.
 - Auto:
   - mặc định 2 từ;
-  - >= 8 lượt và accuracy < 65% → 1 từ;
-  - >= 15 lượt và accuracy >= 88% → 3 từ;
-  - >= 40 lượt và accuracy >= 92% → 4 từ.
-- Nếu mức không có dữ liệu → chọn mức gần nhất; level khóa không hợp topic mới → Auto.
-- Đã tránh collision rõ như `mặt trời`/Cơ thể và `màu cam`/Đồ ăn.
+  - >= 8 lượt, accuracy < 65% → 1 từ;
+  - >= 15 lượt, accuracy >= 88% → 3 từ;
+  - >= 40 lượt, accuracy >= 92% → 4 từ.
+- Nếu mức không có dữ liệu → mức gần nhất.
 
-### 2026-08-14 — Phase 7: Hồ sơ + thống kê
+### Profiles
+- Registry: `goChuVer2.profiles.v1`.
+- Active: `goChuVer2.activeProfile.v1`.
+- Data: `goChuVer2.profile.<profileId>.v1`.
+- Lần đầu tự tạo **Bé 1** và migrate stats/topic/level/Memory cũ.
+- Hồ sơ lưu `promptStats`, study time và learning preferences.
+- Voice/volume/hoa-thường vẫn là cài đặt thiết bị.
+- Phase 7: PR #8 → squash `e281c40`.
 
-- Tạo `profile-stats.js`, `profile-stats.css`.
-- Registry hồ sơ: `goChuVer2.profiles.v1`.
-- Hồ sơ active: `goChuVer2.activeProfile.v1`.
-- Data từng hồ sơ: `goChuVer2.profile.<profileId>.v1`.
-- Schema hồ sơ:
-  - `promptStats`;
-  - `study.totalSeconds` + `study.days[YYYY-MM-DD]`;
-  - `preferences.topicId`;
-  - `preferences.levelMode`;
-  - `preferences.memoryWordCount`;
-  - `preferences.memorySeconds`.
-- Lần đầu Phase 7 chạy: tự tạo **Bé 1** và migrate `goChuVer2.promptStats.v1` + topic/level/Memory hiện tại vào hồ sơ này để không mất tiến độ cũ.
-- Sau Phase 7, `savePromptStats`, `saveTopicLevelSetting`, `saveMemoryNumber` được route vào data của hồ sơ active thay vì trộn chung giữa các bé.
-- Voice/âm lượng/hoa-thường vẫn là **cài đặt thiết bị**, không tách theo bé.
-- Bộ đếm HUD vẫn là thời gian phiên hiện tại; dashboard lưu riêng **hôm nay** và **tổng thời gian** cho từng bé.
-- Thời gian profile được flush mỗi 15 giây và khi tab bị ẩn/đóng.
-- Chuyển hồ sơ: flush hồ sơ cũ → dừng Listen/Memory/Review tạm → nạp stats/preferences bé mới → rebuild pool Easy → cập nhật UI, không reload trang.
-- Dashboard mở bằng nút 👤 trên HUD.
-- Dashboard có tổng quan, Top 10 prompt yếu, thống kê theo 9 chủ đề, quản lý hồ sơ, reset hiện tại, export/import JSON.
-- Không cho xóa hồ sơ cuối cùng.
-- Import backup có xác nhận vì thay toàn bộ dữ liệu profile trên thiết bị.
-- Backup format: `{ app: "go-chu-ver2", version: 1, profiles, data }`.
-- Phạm vi Phase 7: `profile-stats.js`, `profile-stats.css`, `styles.css`, `index.html`, `HANDOFF.md`.
+### Phase 8 — Vietnamese input
 
-## 5. Kế hoạch Phase 8 — Tiếng Việt + bàn phím
+Files:
+- `vietnamese-input.js`.
+- `vietnamese-input.css`.
+- `vietnamese-dashboard.js`.
 
-Mục tiêu: giúp bé hiểu **sai ở âm/chữ/dấu nào** và học cách gõ tiếng Việt, nhưng giữ UI rất đơn giản.
+Key setting thiết bị:
+- `goChuVer2.inputGuide.v1` = `off | telex | vni`.
 
-Plan:
+Quy tắc:
+- Progress theo word chỉ bật ở Easy; Hard/Free giữ cách hiển thị hiện tại.
+- Listen/Memory vẫn che toàn bộ chữ kể cả màu của span progress.
+- Accent-only detection bỏ combining marks và coi `đ/d` cùng base để nhận diện lỗi tiếng Việt đặc thù.
+- Chỉ ghi tối đa 1 `accentErrors` cho một lượt prompt dù bé bấm sai lặp lại.
+- Metadata accent nằm trong promptStats của hồ sơ nên tự đi theo profile và backup JSON.
+- Telex/VNI chỉ là **hướng dẫn**, không sửa giá trị input.
+- Telex hỗ trợ: `ă aw`, `â aa`, `ê ee`, `ô oo`, `ơ ow`, `ư uw`, `đ dd`, dấu `s/f/r/x/j`.
+- VNI hỗ trợ: `ă a8`, `â a6`, `ê e6`, `ô o6`, `ơ o7`, `ư u7`, `đ d9`, dấu `1/2/3/4/5`.
+- Đã test mapping với `bé`, `mèo`, `đường`, `tiếng`, `trường`, `cảm`, `ơn`, `người`, `học`, `chữ`.
 
-1. Thêm progress theo từng **từ**: từ đang gõ đúng được nhấn nhẹ, từ kế tiếp là focus.
-2. Không tô từng ký tự thành hàng ô như UI cũ; chỉ dùng underline/highlight nhẹ.
-3. Khi sai dấu (`a/á/à/ả/ã/ạ`, `ă`, `â`, `ê`, `ô`, `ơ`, `ư`, `đ`), phản hồi riêng kiểu: **“Đúng chữ, sai dấu”** nếu xác định được.
-4. Tạo module bàn phím tiếng Việt riêng, mặc định **tắt**.
-5. Tùy chọn **Telex / VNI / Không hướng dẫn**.
-6. Telex gợi ý ở mức chuỗi phím đơn giản, ví dụ `á → as`, `ă → aw`, `đ → dd`; không can thiệp IME của hệ điều hành.
-7. VNI tương tự, chỉ là gợi ý; không tự biến đổi input.
-8. Chỉ hiển thị 1–3 phím cần thiết cho ký tự/từ hiện tại, không dựng full keyboard trên màn hình.
-9. Tôn trọng composition event (`e.isComposing`) để không phá bộ gõ tiếng Việt đang dùng.
-10. Thêm thống kê lỗi dấu như metadata bổ sung nhưng không phá schema promptStats hiện tại.
-11. Mobile: gợi ý phím nằm dưới input và tự ẩn khi không cần.
-12. Cập nhật HANDOFF trong cùng PR.
+## 5. Kế hoạch tiếp theo — Phase 9: Ổn định hóa + hoàn thiện offline
+
+Sau khi Phase 8 merge, ưu tiên không thêm quá nhiều feature mới ngay. Phase 9 tập trung chất lượng:
+
+1. Rà soát desktop/mobile các tổ hợp: normal, review, Listen, Memory, topic, profile.
+2. Kiểm tra các wrapper `showText/setMode/checkNext` để phát hiện xung đột giữa module sau nhiều phase.
+3. Thêm smoke-test JS thuần cho các hàm không phụ thuộc DOM: topic mapping, Auto level, Telex/VNI, accent detection.
+4. Thêm trang/chế độ debug chỉ dành phụ huynh/dev nếu cần, mặc định ẩn.
+5. Mở rộng thống kê Nâng cao/Tự do mà không làm nhiễu adaptive stats Đơn giản.
+6. Gom dependency `../IMG/...` vào repo hoặc tạo fallback local.
+7. Đưa audio binary cần thiết vào repo khi có luồng upload phù hợp.
+8. Nếu muốn offline 100%, tải Twemoji SVG đang dùng về local thay vì CDN.
+9. Rà soát accessibility: focus, aria, keyboard navigation.
+10. Rà soát hiệu năng `localStorage`, tránh write quá dày khi dữ liệu lớn.
+11. Cập nhật HANDOFF trong mọi đợt sửa.
 
 ## 6. Việc còn tồn đọng
 
 - Audio binary remote chưa được bổ sung.
 - Dependency `../IMG/...` của UI gốc chưa gom vào repo.
 - Hai branch thử Phase 2 có thể xóa thủ công.
-- Phase 3 đang dùng CDN; nếu cần offline 100%, tải SVG về repo và đổi base URL sang local.
+- Phase 3 đang dùng Twemoji CDN; chưa offline 100%.
 - Nâng cao/Tự do chưa có adaptive prompt stats như Đơn giản.
