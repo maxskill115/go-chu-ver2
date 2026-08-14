@@ -3,6 +3,7 @@
  * Twemoji Phase 3 đã có img.onerror fallback riêng nên không probe tại đây.
  */
 const goChuAssetProbeCache = new Map();
+let goChuAssetReliabilityInitialized = false;
 
 const GO_CHU_STATIC_UI_ASSETS = [
     { selector: ".title-icon", property: "--ui-icon-url", fallback: "⌨️", label: "Title icon" },
@@ -126,6 +127,7 @@ function getGoChuAssetHealth(){
     }));
 
     return {
+        initialized: goChuAssetReliabilityInitialized,
         total: items.length,
         ok: items.filter(item => item.status === "ok").length,
         missing: items.filter(item => item.status === "missing").length,
@@ -143,16 +145,29 @@ function printGoChuAssetHealth(){
 }
 
 function initGoChuAssetReliability(){
+    if(goChuAssetReliabilityInitialized) return;
+    goChuAssetReliabilityInitialized = true;
     probeStaticUiAssets();
     probeFreePoemVisibleAssets();
     observeFreePoemAssetChanges();
+    if(typeof goChuStartupMark === "function") goChuStartupMark("assetProbe:started");
+}
+
+function scheduleGoChuAssetReliability(){
+    const run = () => initGoChuAssetReliability();
+    if("requestIdleCallback" in window){
+        window.requestIdleCallback(run, { timeout: 1200 });
+    }else{
+        setTimeout(run, 700);
+    }
 }
 
 window.getGoChuAssetHealth = getGoChuAssetHealth;
 window.printGoChuAssetHealth = printGoChuAssetHealth;
+window.initGoChuAssetReliability = initGoChuAssetReliability;
 
 if(document.readyState === "loading"){
-    document.addEventListener("DOMContentLoaded", initGoChuAssetReliability, { once: true });
+    document.addEventListener("DOMContentLoaded", scheduleGoChuAssetReliability, { once: true });
 }else{
-    initGoChuAssetReliability();
+    scheduleGoChuAssetReliability();
 }
