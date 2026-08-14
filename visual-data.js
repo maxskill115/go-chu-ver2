@@ -2,10 +2,10 @@
 const GO_CHU_VISUAL_ASSET_BASE = "https://cdn.jsdelivr.net/gh/jdecked/twemoji@17.0.3/assets/svg";
 
 /*
- * Quy tắc visual mới:
- * - `exact`: chỉ match khi toàn bộ prompt đúng bằng cụm đó.
- * - `contains`: chỉ dùng với cụm đủ rõ nghĩa, tránh keyword mơ hồ như "cam", "cây", "nước", "nhà".
- * - Không có rule phù hợp => ẩn hình, không cố nhét hình gần đúng.
+ * Quy tắc visual:
+ * - exact: chỉ match khi toàn bộ prompt đúng bằng cụm đó.
+ * - contains: chỉ dùng với cụm đủ rõ nghĩa.
+ * - không có rule chắc chắn => ẩn hình.
  */
 const promptVisualRules = [
     { exact: ["mèo", "con mèo", "mèo con"], contains: ["con mèo ngủ", "mèo kêu meo meo"], code: "1f431", alt: "Con mèo", fallback: "🐱" },
@@ -14,7 +14,7 @@ const promptVisualRules = [
     { exact: ["bò", "con bò", "bò con"], contains: ["con bò ăn cỏ"], code: "1f42e", alt: "Con bò", fallback: "🐮" },
     { exact: ["gà", "con gà", "gà con"], contains: ["con gà gáy", "gà con theo mẹ"], code: "1f414", alt: "Con gà", fallback: "🐔" },
     { exact: ["vịt", "con vịt", "vịt con"], contains: ["con vịt bơi", "vịt con xuống nước"], code: "1f986", alt: "Con vịt", fallback: "🦆" },
-    { exact: ["cá", "con cá", "cá vàng"], contains: ["con cá bơi", "cá bơi dưới nước"], code: "1f41f", alt: "Con cá", fallback: "🐟" },
+    { exact: ["cá", "con cá", "cá vàng", "con cá vàng"], contains: ["con cá bơi", "cá bơi dưới nước"], code: "1f41f", alt: "Con cá", fallback: "🐟" },
     { exact: ["chim", "con chim"], contains: ["con chim bay", "chim hót líu lo", "chim bay trên trời", "chim đậu trên cành"], code: "1f426", alt: "Con chim", fallback: "🐦" },
     { exact: ["thỏ", "con thỏ", "thỏ con"], contains: ["thỏ ăn cà rốt"], code: "1f430", alt: "Con thỏ", fallback: "🐰" },
     { exact: ["ngựa", "con ngựa", "ngựa con"], contains: ["con ngựa chạy", "con ngựa chạy nhanh"], code: "1f434", alt: "Con ngựa", fallback: "🐴" },
@@ -22,6 +22,25 @@ const promptVisualRules = [
     { exact: ["voi", "con voi"], contains: ["con voi rất to"], code: "1f418", alt: "Con voi", fallback: "🐘" },
     { exact: ["kiến", "con kiến"], contains: ["con kiến rất nhỏ"], code: "1f41c", alt: "Con kiến", fallback: "🐜" },
     { exact: ["dê", "con dê", "dê con"], contains: ["con dê ăn lá", "con dê leo núi"], code: "1f410", alt: "Con dê", fallback: "🐐" },
+
+    { exact: ["sư tử", "con sư tử"], contains: [], code: "1f981", alt: "Con sư tử", fallback: "🦁" },
+    { exact: ["hổ", "con hổ"], contains: [], code: "1f42f", alt: "Con hổ", fallback: "🐯" },
+    { exact: ["gấu", "con gấu"], contains: [], code: "1f43b", alt: "Con gấu", fallback: "🐻" },
+    { exact: ["sói", "con sói"], contains: [], code: "1f43a", alt: "Con sói", fallback: "🐺" },
+    { exact: ["cáo", "con cáo"], contains: [], code: "1f98a", alt: "Con cáo", fallback: "🦊" },
+    { exact: ["nai", "con nai", "hươu", "con hươu"], contains: [], code: "1f98c", alt: "Con nai", fallback: "🦌" },
+    { exact: ["rùa", "con rùa"], contains: [], code: "1f422", alt: "Con rùa", fallback: "🐢" },
+    { exact: ["rắn", "con rắn"], contains: [], code: "1f40d", alt: "Con rắn", fallback: "🐍" },
+    { exact: ["ếch", "con ếch"], contains: [], code: "1f438", alt: "Con ếch", fallback: "🐸" },
+    { exact: ["cua", "con cua"], contains: [], code: "1f980", alt: "Con cua", fallback: "🦀" },
+    { exact: ["tôm", "con tôm"], contains: [], code: "1f990", alt: "Con tôm", fallback: "🦐" },
+    { exact: ["cá mập", "con cá mập"], contains: [], code: "1f988", alt: "Cá mập", fallback: "🦈" },
+    { exact: ["cá heo", "con cá heo"], contains: [], code: "1f42c", alt: "Cá heo", fallback: "🐬" },
+    { exact: ["chim cánh cụt", "con chim cánh cụt"], contains: [], code: "1f427", alt: "Chim cánh cụt", fallback: "🐧" },
+    { exact: ["chim đại bàng", "con chim đại bàng"], contains: [], code: "1f985", alt: "Đại bàng", fallback: "🦅" },
+    { exact: ["chim cú", "con chim cú"], contains: [], code: "1f989", alt: "Chim cú", fallback: "🦉" },
+    { exact: ["ong", "con ong"], contains: ["ong tìm mật hoa"], code: "1f41d", alt: "Con ong", fallback: "🐝" },
+    { exact: ["bướm", "con bướm"], contains: ["bướm bay quanh hoa"], code: "1f98b", alt: "Con bướm", fallback: "🦋" },
 
     { exact: ["quả táo", "táo"], contains: ["quả táo màu đỏ"], code: "1f34e", alt: "Quả táo", fallback: "🍎" },
     { exact: ["quả chuối", "chuối"], contains: ["quả chuối màu vàng", "bé thích ăn chuối"], code: "1f34c", alt: "Quả chuối", fallback: "🍌" },
@@ -42,6 +61,6 @@ const promptVisualRules = [
     { exact: ["mặt trời", "trời nắng"], contains: ["mặt trời mọc", "mặt trời lặn", "mặt trời sáng", "hôm nay trời nắng"], code: "2600", alt: "Mặt trời", fallback: "☀️" },
     { exact: ["trời mưa"], contains: ["mưa rơi", "hôm nay trời mưa"], code: "1f327", alt: "Trời mưa", fallback: "🌧️" },
     { exact: ["mây trắng"], contains: ["mây trắng bay"], code: "2601", alt: "Đám mây", fallback: "☁️" },
-    { exact: ["bông hoa"], contains: ["hoa đang nở", "hoa rất đẹp", "bướm bay quanh hoa", "ong tìm mật hoa"], code: "1f33c", alt: "Bông hoa", fallback: "🌼" },
+    { exact: ["bông hoa"], contains: ["hoa đang nở", "hoa rất đẹp"], code: "1f33c", alt: "Bông hoa", fallback: "🌼" },
     { exact: ["cây xanh"], contains: ["cây xanh tốt", "cây cho bóng mát", "lá cây màu xanh"], code: "1f333", alt: "Cây xanh", fallback: "🌳" }
 ];
