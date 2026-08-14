@@ -1,0 +1,605 @@
+.game-selector-card .game-nav-btn:nth-of-type(4) {
+    background: linear-gradient(135deg, rgba(255, 90, 90, 0.2), rgba(200, 20, 20, 0.1));
+    border-color: #ff8888;
+    color: #ff9999;
+}
+
+.game-nav-btn.secondary {
+    background: transparent;
+    border-style: dashed;
+    color: #88ccff;
+    text-shadow: none;
+}
+
+.game-nav-btn.secondary:hover {
+    transform: none;
+    border-color: #ffd700;
+    color: #ffd700;
+    box-shadow: none;
+}
+
+.study-time-text {
+    justify-self: center;
+    font-size: 17px;
+    font-weight: 800;
+    color: #d8efff;
+    letter-spacing: 0.4px;
+    background: rgba(10, 22, 40, 0.6);
+    border: 1px solid rgba(136, 204, 255, 0.3);
+    border-radius: 999px;
+    padding: 8px 16px;
+    backdrop-filter: blur(10px);
+}
+
+.settings-panel {
+    background: rgba(12, 26, 46, 0.97);
+    border: 2px solid #5f8fb7;
+    border-radius: 12px;
+    padding: 12px;
+    display: grid;
+    gap: 10px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.34);
+}
+
+.settings-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #d8efff;
+}
+
+.settings-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #ffd700;
+}
+
+.volume-row {
+    display: grid;
+    gap: 8px;
+}
+
+.volume-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.settings-range {
+    width: 100%;
+    accent-color: #88ccff;
+}
+
+.settings-value {
+    font-size: 14px;
+    font-weight: 800;
+    color: #ffd700;
+}
+
+.settings-select {
+    width: 100%;
+    border-radius: 10px;
+    border: 2px solid var(--border-color);
+    background: var(--bg-dark);
+    color: #ffffff;
+    font-size: 16px;
+    padding: 10px;
+    outline: none;
+}
+
+.settings-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(136, 204, 255, 0.18);
+}
+
+.center-toast {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1200;
+    padding: 16px 24px;
+    border-radius: 12px;
+    font-size: clamp(24px, 4vw, 40px);
+    font-weight: 800;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.center-toast.show {
+    opacity: 1;
+}
+
+.center-toast.correct {
+    background: rgba(45, 106, 79, 0.95);
+    color: #d9ffe8;
+    box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.35);
+}
+
+.center-toast.incorrect {
+    background: rgba(255, 215, 0, 0.95);
+    color: #000;
+    box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.35);
+}
+
+.free-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.free-btn {
+    min-width: 160px;
+    padding: 12px 18px;
+    font-size: 18px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    font-weight: 700;
+    color: #ffffff;
+    background: #2f5b82;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.free-btn-icon {
+    width: 1.1em;
+    height: 1.1em;
+    min-width: 1.1em;
+    min-height: 1.1em;
+}
+
+.free-btn.primary {
+    background: linear-gradient(135deg, #2d6a4f, #40916c);
+}
+
+.free-btn.warning {
+    background: linear-gradient(135deg, #9c5b00, #b87800);
+}
+
+.free-feedback {
+    margin-top: 14px;
+    font-size: 24px;
+    font-weight: 800;
+    min-height: 34px;
+    text-align: center;
+}
+
+.free-feedback.correct {
+    color: var(--correct-color);
+    text-shadow: 0 0 10px var(--correct-color);
+    animation: celebratePop 0.6s ease, celebrateFade 2.4s ease 0.9s forwards;
+}
+
+.free-feedback.incorrect {
+    display: inline-block;
+    padding: 8px 14px;
+    border-radius: 8px;
+    background-color: var(--secondary-color);
+    color: #000;
+}
+
+.free-progress {
+    margin-top: 8px;
+    color: #bde7ff;
+    font-size: 16px;
+    text-align: right;
+}
+
+.next-wrap {
+    margin-top: 22px;
+}
+
+#nextBtn {
+    min-width: 280px;
+    padding: 16px 30px;
+    font-weight: 800;
+    font-size: clamp(21px, 2.6vw, 26px);
+    letter-spacing: 0.3px;
+    border: 2px solid #8fa8c0;
+    border-radius: 16px;
+    color: #f1f7ff;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+    background: linear-gradient(135deg, #44627f, #3b5872 45%, #314c66);
+    box-shadow: 0 8px 20px rgba(8, 18, 32, 0.32), inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+
+#nextBtn:hover {
+    transform: translateY(-2px) scale(1.03);
+    background: linear-gradient(135deg, #4c6f90, #426482 45%, #375673);
+    box-shadow: 0 10px 24px rgba(8, 18, 32, 0.38), inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+
+/* input */
+.typing-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 20px;
+    font-size: 28px;
+    border-radius: 12px;
+    border: 3px solid var(--border-color);
+    background: var(--bg-dark);
+    color: #ffffff;
+    outline: none;
+}
+
+/* focus */
+.typing-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 10px rgba(136,204,255,0.4);
+}
+
+/* typing effect */
+.typing-input.typing {
+    border-image: linear-gradient(90deg,#38bdf8,#818cf8,#c084fc) 1;
+    box-shadow: 0 0 8px rgba(129,140,248,0.5);
+}
+
+.typing-input::placeholder {
+    color: #94a3b8;
+}
+
+/* result */
+#result {
+    margin-top: 18px;
+    min-height: 56px;
+    font-size: 30px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.35s ease;
+}
+
+#result.incorrect {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background-color: var(--secondary-color);
+    color: #000000;
+    box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.5);
+}
+
+#result.correct {
+    color: var(--correct-color);
+    text-shadow: 0 0 12px var(--correct-color);
+    animation: celebratePop 0.6s ease, celebrateFade 2.4s ease 0.9s forwards;
+}
+
+@keyframes celebratePop {
+    0% {
+        transform: scale(0.7);
+        opacity: 0;
+    }
+    70% {
+        transform: scale(1.08);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes celebrateFade {
+    0% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
+
+@media (max-width: 900px) {
+    .container {
+        width: min(760px, 100%);
+        padding: 26px;
+        border-radius: 16px;
+    }
+
+    #text {
+        font-size: clamp(28px, 5vw, 38px);
+        margin: 22px 0 18px;
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        display: block;
+        min-height: 100dvh;
+        padding: 12px;
+    }
+
+    .container {
+        margin: 68px auto 14px;
+        width: 100%;
+        max-width: 100%;
+        padding: 22px 16px;
+        border-radius: 14px;
+    }
+
+    h1 {
+        font-size: clamp(24px, 7.4vw, 34px);
+        margin-bottom: 14px;
+    }
+
+    .mode-row {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .mode-btn {
+        width: 100%;
+        min-width: 0;
+        margin: 0;
+        font-size: 17px;
+        padding: 12px;
+    }
+
+    /* Thu gọn: khi đã chọn 1 chế độ, ẩn 2 nút còn lại để đỡ chiếm chỗ */
+    .mode-row.collapsed .mode-btn:not(.active) {
+        display: none;
+    }
+
+    /* Tách nút đang chọn thành 2 vùng bấm nằm cạnh nhau (không chồng lên nhau):
+       - vùng chữ (mode-btn-label): bấm vào đổi ngay sang chế độ khác (xử lý trong setMode)
+       - vùng mũi tên (mode-arrow-hit): bấm vào mới mở danh sách để chọn chế độ cụ thể */
+    .mode-row.collapsed .mode-btn.active {
+        display: flex;
+        align-items: stretch;
+        justify-content: space-between;
+        gap: 0;
+        padding: 0;
+    }
+
+    .mode-row.collapsed .mode-btn.active .mode-btn-label {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 12px 8px 12px 12px;
+    }
+
+    .mode-row.collapsed .mode-btn.active .mode-arrow-hit {
+        display: flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        cursor: pointer;
+    }
+
+    .mode-row.collapsed .mode-btn.active .mode-arrow-hit::after {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-right: 2px solid currentColor;
+        border-bottom: 2px solid currentColor;
+        transform: translateY(-15%) rotate(45deg);
+        opacity: 0.85;
+    }
+
+    #text {
+        font-size: clamp(24px, 8vw, 34px);
+        min-height: 44px;
+        margin: 16px 0 14px;
+        line-height: 1.3;
+    }
+
+    .typing-input {
+        font-size: 22px;
+        padding: 14px;
+    }
+
+    #result {
+        margin-top: 14px;
+        min-height: 46px;
+        font-size: 24px;
+    }
+
+    .free-feedback {
+        font-size: 20px;
+    }
+
+    .free-actions {
+        gap: 8px;
+    }
+
+    .free-btn,
+    #nextBtn {
+        width: 100%;
+        min-width: 0;
+    }
+
+    #nextBtn {
+        padding: 14px 16px;
+        font-size: clamp(20px, 5.2vw, 24px);
+    }
+
+    .free-select,
+    .free-textarea,
+    .free-input {
+        font-size: 16px;
+        padding: 10px;
+    }
+
+    .study-hud {
+        top: 8px;
+        left: 8px;
+        right: 8px;
+        gap: 6px;
+    }
+
+    .hud-icon-btn {
+        width: 38px;
+        height: 38px;
+        font-size: 18px;
+    }
+
+    .study-time-text {
+        font-size: 15px;
+        padding: 7px 14px;
+    }
+
+    .settings-panel {
+        max-height: min(56dvh, 440px);
+        overflow-y: auto;
+    }
+
+    .game-selector-card {
+        width: 100%;
+        max-height: min(84dvh, 700px);
+        border-radius: 16px;
+        padding: 20px 12px 14px;
+    }
+
+    .game-nav-btn {
+        font-size: 14px;
+        padding: 11px;
+    }
+
+    .game-nav-btn:hover,
+    .game-nav-btn:active {
+        transform: none;
+    }
+
+    .floating-actions {
+        top: auto;
+        bottom: max(10px, env(safe-area-inset-bottom));
+        left: 50%;
+        transform: translateX(-50%);
+        flex-direction: row;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 999px;
+        background: rgba(10, 22, 40, 0.88);
+        border: 1px solid rgba(136, 204, 255, 0.45);
+        backdrop-filter: blur(8px);
+    }
+
+    .floating-action-btn {
+        width: 52px;
+        height: 52px;
+        font-size: 24px;
+        margin: 0;
+    }
+}
+
+/* Trên PC: panel cài đặt là hộp nhỏ nổi ở góc trên bên phải, gần nút bánh răng,
+   không chiếm hết chiều ngang của thanh study-hud. */
+@media (min-width: 769px) {
+    .settings-panel {
+        position: fixed;
+        top: calc(max(12px, env(safe-area-inset-top)) + 58px);
+        right: max(12px, env(safe-area-inset-right));
+        width: min(300px, calc(100vw - 24px));
+        max-height: min(70vh, 460px);
+        overflow-y: auto;
+        z-index: 1150;
+    }
+}
+
+@media (max-width: 600px) {
+    body {
+        padding: 16px;
+    }
+
+    .container {
+        padding: 22px;
+    }
+
+    h1 {
+        font-size: clamp(27px, 8vw, 36px);
+    }
+
+    .mode-btn {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .typing-input {
+        font-size: 24px;
+        padding: 16px;
+    }
+
+    #nextBtn {
+        width: 100%;
+    }
+
+    .free-btn {
+        width: 100%;
+    }
+
+    .game-selector-card {
+        border-radius: 18px;
+        padding: 22px 14px 14px;
+    }
+
+    .game-nav-btn {
+        font-size: 14px;
+        padding: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    :root {
+        --free-text-size: 22px;
+        --free-line-height: 1.55;
+    }
+
+    body {
+        padding: 8px;
+    }
+
+    .container {
+        margin-top: 62px;
+        padding: 18px 12px;
+    }
+
+    h1 {
+        font-size: clamp(22px, 8.2vw, 30px);
+    }
+
+    button {
+        font-size: 16px;
+        padding: 10px 12px;
+    }
+
+    .typing-input {
+        font-size: 20px;
+        padding: 12px;
+    }
+
+    #result {
+        font-size: 21px;
+    }
+
+    .study-time-text {
+        font-size: 15px;
+    }
+
+    .settings-item {
+        font-size: 14px;
+    }
+
+    .settings-select {
+        font-size: 14px;
+    }
+
+    .floating-action-btn {
+        width: 48px;
+        height: 48px;
+        font-size: 22px;
+    }
+}
