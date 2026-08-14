@@ -54,6 +54,12 @@ function runGoChuSmokeTests(){
         const profile = typeof getActiveProfile === "function" ? getActiveProfile() : null;
         test("Có hồ sơ active", Boolean(profile && profile.id), profile?.name || "");
         test("Profile data có promptStats", Boolean(activeProfileData && activeProfileData.promptStats && typeof activeProfileData.promptStats === "object"));
+        test("Profile data có modeStats tách riêng", Boolean(
+            activeProfileData &&
+            activeProfileData.modeStats &&
+            typeof activeProfileData.modeStats.hard === "object" &&
+            typeof activeProfileData.modeStats.free === "object"
+        ));
     } catch (error) {
         test("Profile system", false, error.message);
     }
@@ -64,6 +70,37 @@ function runGoChuSmokeTests(){
         test("Smart round không lặp liền nhau", !hasAdjacentDuplicate, `${round.length} prompt`);
     } catch (error) {
         test("Smart round", false, error.message);
+    }
+
+    try {
+        test("Runtime: showText tồn tại", typeof showText === "function");
+        test("Runtime: setMode tồn tại", typeof setMode === "function");
+        test("Runtime: checkNext tồn tại", typeof checkNext === "function");
+        test("Runtime: nextPromptForCurrentMode tồn tại", typeof nextPromptForCurrentMode === "function");
+        test("Runtime: submitFreeAnswer tồn tại", typeof submitFreeAnswer === "function");
+        test("Runtime: setListenMode tồn tại", typeof setListenMode === "function");
+        test("Runtime: setMemoryMode tồn tại", typeof setMemoryMode === "function");
+        test(
+            "Invariant: Listen và Memory không cùng active",
+            !(Boolean(listenModeActive) && Boolean(memoryModeActive)),
+            `listen=${Boolean(listenModeActive)}, memory=${Boolean(memoryModeActive)}`
+        );
+    } catch (error) {
+        test("Runtime wrapper chain", false, error.message);
+    }
+
+    try {
+        const hardSummary = getStandaloneModeSummary("hard");
+        const freeSummary = getStandaloneModeSummary("free");
+        test("Hard stats schema hợp lệ", hardSummary.attempts === hardSummary.correct + hardSummary.wrong);
+        test("Free stats schema hợp lệ", freeSummary.attempts === freeSummary.correct + freeSummary.wrong);
+        test(
+            "Hard/Free không nằm trong promptStats adaptive",
+            !Object.prototype.hasOwnProperty.call(promptStats || {}, "__hard__") &&
+            !Object.prototype.hasOwnProperty.call(promptStats || {}, "__free__")
+        );
+    } catch (error) {
+        test("Standalone mode stats", false, error.message);
     }
 
     const passed = results.filter(item => item.pass).length;
