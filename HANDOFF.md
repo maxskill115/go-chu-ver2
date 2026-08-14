@@ -47,7 +47,7 @@
 - Phase 9 đợt 2: PR #12 → `7d598f2`.
 - Phase 9 đợt 3: PR #13 → `94bb3ef`.
 - Phase 9 đợt 4: PR #14 → `d750722`.
-- Phase 9 đợt 5 asset reliability: branch `agent/phase9-asset-reliability`, PR/commit cập nhật sau merge.
+- Phase 9 đợt 5: PR #15 → `0e0ce0e`.
 
 ## 4. Hệ thống chính
 
@@ -101,7 +101,7 @@ PR #14 → `d750722`.
 - Debug: `getGoChuStorageHealth()`, `printGoChuStorageHealth()`, `goChuStorageMetrics`.
 
 ### Đợt 5 — Asset reliability + UI fallback ✅
-Branch: `agent/phase9-asset-reliability`.
+PR #15 → `0e0ce0e`.
 
 Files:
 
