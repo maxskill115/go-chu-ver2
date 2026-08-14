@@ -56,7 +56,7 @@
 - Phase 9 đợt 3: PR #13 → `94bb3ef`.
 - Phase 9 đợt 4: PR #14 → `d750722`.
 - Phase 9 đợt 5: PR #15 → `0e0ce0e`.
-- Phase 10 Google TTS: branch `agent/phase10-prerendered-google-tts`, PR/commit cập nhật sau merge.
+- Phase 10 Google TTS framework: PR #17 → `b7e52fd`.
 
 ## 4. Hệ thống chính
 
@@ -123,6 +123,8 @@ PR #15 → `0e0ce0e`.
 - Debug: `getGoChuAssetHealth()`, `printGoChuAssetHealth()`.
 
 ## 6. Phase 10 — Pre-rendered Google TTS MP3
+
+Framework đã merge qua PR #17 → `b7e52fd`. Phần còn lại của Phase 10 là render và commit MP3 thật.
 
 ### Mục tiêu
 
@@ -225,7 +227,9 @@ git push
 
 - `speakPrompt()` ưu tiên MP3 manifest.
 - Nếu file lỗi/404 → đánh dấu missing trong session và fallback Web Speech voice Việt.
+- Guard chống `error` + `play()` rejection gọi fallback hai lần.
 - `NotAllowedError` do autoplay không bị coi là file missing.
+- Chuyển prompt dừng nguồn âm cũ ngay trước khi lên lịch phát prompt mới.
 - `setListenMode()` có thể bật chỉ với MP3 local, không bắt buộc máy phải có Web Speech voice Việt.
 - Rời Easy → dừng MP3.
 - Bật Memory → Listen bị tắt thông qua wrapper hiện có → MP3 dừng.
