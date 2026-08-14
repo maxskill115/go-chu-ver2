@@ -42,27 +42,79 @@ const GO_CHU_TOPIC_TERMS = {
     ]
 };
 
+/* ===== PHASE 9 ĐỢT 11 - CACHE DỮ LIỆU TĨNH =====
+ * EasyWords là dữ liệu tĩnh trong một phiên chạy. Không normalize/scan lại
+ * hàng trăm prompt ở mọi showText/build round.
+ */
+const GO_CHU_UNIQUE_EASY_PROMPTS = Object.freeze([...new Set(easyWords)]);
+const GO_CHU_EASY_PROMPT_SET = new Set(GO_CHU_UNIQUE_EASY_PROMPTS);
+const goChuTopicNormalizeCache = new Map();
+const goChuTopicMatchCache = new Map();
+const goChuWordCountCache = new Map();
+
 function normalizeTopicText(text){
-    return String(text || "")
+    const raw = String(text || "");
+    if(goChuTopicNormalizeCache.has(raw)) return goChuTopicNormalizeCache.get(raw);
+
+    const normalized = raw
         .normalize("NFC")
         .toLocaleLowerCase("vi-VN")
         .replace(/[.,!?;:()\[\]{}"'“”‘’]/g, " ")
         .replace(/\s+/g, " ")
         .trim();
+
+    goChuTopicNormalizeCache.set(raw, normalized);
+    return normalized;
 }
+
+const GO_CHU_NORMALIZED_TOPIC_TERMS = Object.freeze(
+    Object.fromEntries(
+        Object.entries(GO_CHU_TOPIC_TERMS).map(([topicId, terms]) => [
+            topicId,
+            Object.freeze([...new Set(terms.map(normalizeTopicText).filter(Boolean))])
+        ])
+    )
+);
 
 function topicTextContainsTerm(text, term){
     const normalizedText = ` ${normalizeTopicText(text)} `;
     const normalizedTerm = normalizeTopicText(term);
-    return normalizedText.includes(` ${normalizedTerm} `);
+    return Boolean(normalizedTerm && normalizedText.includes(` ${normalizedTerm} `));
 }
 
 function promptMatchesTopic(prompt, topicId){
     if(!topicId || topicId === "all") return true;
-    const terms = GO_CHU_TOPIC_TERMS[topicId] || [];
-    return terms.some(term => topicTextContainsTerm(prompt, term));
+
+    const promptText = String(prompt || "");
+    const cacheKey = `${topicId}\u0000${promptText}`;
+    if(goChuTopicMatchCache.has(cacheKey)) return goChuTopicMatchCache.get(cacheKey);
+
+    const normalizedText = ` ${normalizeTopicText(promptText)} `;
+    const terms = GO_CHU_NORMALIZED_TOPIC_TERMS[topicId] || [];
+    const matched = terms.some(term => normalizedText.includes(` ${term} `));
+    goChuTopicMatchCache.set(cacheKey, matched);
+    return matched;
+}
+
+function getCachedPromptWordCount(prompt){
+    const key = String(prompt || "");
+    if(goChuWordCountCache.has(key)) return goChuWordCountCache.get(key);
+    const count = key.trim().split(/\s+/).filter(Boolean).length;
+    goChuWordCountCache.set(key, count);
+    return count;
 }
 
 function getTopicById(topicId){
     return GO_CHU_TOPICS.find(topic => topic.id === topicId) || GO_CHU_TOPICS[0];
 }
+
+function getGoChuTopicCacheHealth(){
+    return {
+        uniqueEasyPrompts: GO_CHU_UNIQUE_EASY_PROMPTS.length,
+        normalizedStrings: goChuTopicNormalizeCache.size,
+        topicMatches: goChuTopicMatchCache.size,
+        wordCounts: goChuWordCountCache.size
+    };
+}
+
+window.getGoChuTopicCacheHealth = getGoChuTopicCacheHealth;
