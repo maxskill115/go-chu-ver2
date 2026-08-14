@@ -10,6 +10,20 @@ let lastAutoLevel = null;
 const goChuTopicPoolCache = new Map();
 const goChuLevelPoolCache = new Map();
 
+/* ===== PHASE 9 ĐỢT 11C - CACHE QUYẾT ĐỊNH + FAST ROUND ===== */
+const goChuTopicSummaryCache = new Map();
+let goChuEffectiveLevelCache = {
+    topicId: "",
+    levelMode: "",
+    statsRef: null,
+    statsRevision: -1,
+    value: null
+};
+let goChuTopicLevelUiFrame = 0;
+let goChuLastEasyRoundBuildMs = 0;
+let goChuLastEasyRoundSize = 0;
+let goChuLastEasySourcePoolSize = 0;
+
 function loadTopicSetting(){
     try {
         const value = localStorage.getItem(GO_CHU_TOPIC_KEY) || "all";
@@ -32,6 +46,10 @@ function saveTopicLevelSetting(key, value){
     try {
         localStorage.setItem(key, String(value));
     } catch (error) {}
+}
+
+function getCurrentPromptStatsRevision(){
+    return typeof goChuPromptStatsRevision === "number" ? goChuPromptStatsRevision : 0;
 }
 
 function getTopicPool(topicId = selectedTopicId){
@@ -70,13 +88,26 @@ function normalizeSavedLevelForTopic(){
 }
 
 function getTopicLearningSummary(){
+    const statsRef = typeof promptStats !== "undefined" ? promptStats : null;
+    const statsRevision = getCurrentPromptStatsRevision();
+    const cacheKey = selectedTopicId || "all";
+    const cached = goChuTopicSummaryCache.get(cacheKey);
+
+    if(
+        cached &&
+        cached.statsRef === statsRef &&
+        cached.statsRevision === statsRevision
+    ){
+        return cached.summary;
+    }
+
     const pool = getTopicPool();
     let correct = 0;
     let wrong = 0;
 
-    if(typeof promptStats !== "undefined"){
+    if(statsRef){
         pool.forEach(prompt => {
-            const entry = promptStats[prompt];
+            const entry = statsRef[prompt];
             if(!entry) return;
             correct += Number(entry.correct || 0);
             wrong += Number(entry.wrong || 0);
@@ -84,8 +115,15 @@ function getTopicLearningSummary(){
     }
 
     const attempts = correct + wrong;
-    const accuracy = attempts ? correct / attempts : 0;
-    return { attempts, correct, wrong, accuracy };
+    const summary = Object.freeze({
+        attempts,
+        correct,
+        wrong,
+        accuracy: attempts ? correct / attempts : 0
+    });
+
+    goChuTopicSummaryCache.set(cacheKey, { statsRef, statsRevision, summary });
+    return summary;
 }
 
 function calculateAutoTargetLevel(){
@@ -105,12 +143,37 @@ function resolveAvailableAutoLevel(target){
 }
 
 function getEffectiveLearningLevel(){
+    const statsRef = typeof promptStats !== "undefined" ? promptStats : null;
+    const statsRevision = getCurrentPromptStatsRevision();
+
+    if(
+        goChuEffectiveLevelCache.topicId === selectedTopicId &&
+        goChuEffectiveLevelCache.levelMode === selectedLevelMode &&
+        goChuEffectiveLevelCache.statsRef === statsRef &&
+        goChuEffectiveLevelCache.statsRevision === statsRevision &&
+        goChuEffectiveLevelCache.value !== null
+    ){
+        return goChuEffectiveLevelCache.value;
+    }
+
+    let value;
     if(selectedLevelMode !== "auto"){
         const lockedLevel = Number(selectedLevelMode);
-        if(getLevelPool(selectedTopicId, lockedLevel).length) return lockedLevel;
-        return resolveAvailableAutoLevel(lockedLevel);
+        value = getLevelPool(selectedTopicId, lockedLevel).length
+            ? lockedLevel
+            : resolveAvailableAutoLevel(lockedLevel);
+    }else{
+        value = resolveAvailableAutoLevel(calculateAutoTargetLevel());
     }
-    return resolveAvailableAutoLevel(calculateAutoTargetLevel());
+
+    goChuEffectiveLevelCache = {
+        topicId: selectedTopicId,
+        levelMode: selectedLevelMode,
+        statsRef,
+        statsRevision,
+        value
+    };
+    return value;
 }
 
 function promptMatchesCurrentTopic(prompt){
@@ -137,25 +200,56 @@ getWeakPromptRecords = function(){
     );
 };
 
-const baseBuildSmartEasyRoundForTopic = buildSmartEasyRound;
-buildSmartEasyRound = function(previousPrompt = ""){
-    /* QUAN TRỌNG: level chỉ tính 1 lần cho cả round, không tính lại cho từng prompt. */
-    const effectiveLevel = getEffectiveLearningLevel();
-    const filtered = baseBuildSmartEasyRoundForTopic(previousPrompt)
-        .filter(prompt =>
-            promptMatchesTopic(prompt, selectedTopicId) &&
-            getPromptWordCount(prompt) === effectiveLevel
-        );
+function shuffleTopicLearningPool(items){
+    const shuffled = [...items];
+    for(let i = shuffled.length - 1; i > 0; i--){
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+}
 
-    if(previousPrompt && filtered.length > 1 && filtered[0] === previousPrompt){
-        const swapIndex = filtered.findIndex((prompt, i) => i > 0 && prompt !== previousPrompt);
+/*
+ * FAST PATH:
+ * Trước đây round Easy gọi baseBuildSmartEasyRound() trên TOÀN BỘ easyWords,
+ * chèn weak prompt, rồi mới lọc Chủ đề/Cấp độ. Khi vào Easy việc này lãng phí.
+ * Bây giờ lấy thẳng cached level-pool đã lọc và chỉ shuffle đúng pool đó.
+ */
+function buildSmartEasyRound(previousPrompt = ""){
+    const startedAt = performance.now();
+    const effectiveLevel = getEffectiveLearningLevel();
+    const sourcePool = getLevelPool(selectedTopicId, effectiveLevel);
+    const fallbackPool = sourcePool.length ? sourcePool : getTopicPool(selectedTopicId);
+    const round = shuffleTopicLearningPool(fallbackPool);
+
+    const weak = baseGetWeakPromptRecordsForTopic()
+        .filter(item =>
+            promptMatchesTopic(item.prompt, selectedTopicId) &&
+            getPromptWordCount(item.prompt) === effectiveLevel
+        )
+        .slice(0, GO_CHU_SMART_EXTRA_LIMIT);
+
+    weak.forEach((item, weakIndex) => {
+        const preferred = 4 + weakIndex * 5 + Math.floor(Math.random() * 5);
+        const insertIndex = findSafeSmartInsertIndex(round, item.prompt, preferred);
+        if(insertIndex >= 0) round.splice(insertIndex, 0, item.prompt);
+    });
+
+    if(previousPrompt && round.length > 1 && round[0] === previousPrompt){
+        const swapIndex = round.findIndex((prompt, i) => i > 0 && prompt !== previousPrompt);
         if(swapIndex > 0){
-            [filtered[0], filtered[swapIndex]] = [filtered[swapIndex], filtered[0]];
+            [round[0], round[swapIndex]] = [round[swapIndex], round[0]];
         }
     }
 
-    return filtered;
-};
+    goChuLastEasySourcePoolSize = fallbackPool.length;
+    goChuLastEasyRoundSize = round.length;
+    goChuLastEasyRoundBuildMs = performance.now() - startedAt;
+    if(typeof goChuStartupMeasure === "function"){
+        goChuStartupMeasure("easy:buildFilteredRound", startedAt);
+    }
+    return round;
+}
 
 const baseBuildMemoryRoundForTopic = buildMemoryRound;
 buildMemoryRound = function(previousPrompt = ""){
@@ -225,7 +319,7 @@ function ensureTopicLevelBar(){
         document.getElementById("levelSelect").value = selectedLevelMode;
         if(typeof smartReviewActive !== "undefined") smartReviewActive = false;
         rebuildTopicLearningRound();
-        updateTopicLevelBar();
+        scheduleTopicLevelBarUpdate();
         playClickSound();
     });
 
@@ -248,7 +342,7 @@ function ensureTopicLevelBar(){
         saveTopicLevelSetting(GO_CHU_LEVEL_KEY, selectedLevelMode);
         if(typeof smartReviewActive !== "undefined") smartReviewActive = false;
         rebuildTopicLearningRound();
-        updateTopicLevelBar();
+        scheduleTopicLevelBarUpdate();
         playClickSound();
     });
 
@@ -285,7 +379,6 @@ function updateTopicLevelBar(){
     bar.classList.toggle("hidden-by-mode", !isEasy);
     bar.setAttribute("aria-hidden", isEasy ? "false" : "true");
 
-    /* Ngoài Easy không tính summary/pool vô ích. */
     if(!isEasy){
         status.textContent = "";
         levelSelect.disabled = true;
@@ -312,12 +405,20 @@ function updateTopicLevelBar(){
     }
 }
 
+function scheduleTopicLevelBarUpdate(){
+    if(goChuTopicLevelUiFrame) return;
+    goChuTopicLevelUiFrame = requestAnimationFrame(() => {
+        goChuTopicLevelUiFrame = 0;
+        updateTopicLevelBar();
+    });
+}
+
 const baseRecordPromptResultForTopic = recordPromptResult;
 recordPromptResult = function(prompt, isCorrect){
     const beforeLevel = selectedLevelMode === "auto" ? getEffectiveLearningLevel() : null;
     baseRecordPromptResultForTopic(prompt, isCorrect);
     const afterLevel = selectedLevelMode === "auto" ? getEffectiveLearningLevel() : null;
-    updateTopicLevelBar();
+    scheduleTopicLevelBarUpdate();
 
     if(
         selectedLevelMode === "auto" &&
@@ -335,26 +436,31 @@ recordPromptResult = function(prompt, isCorrect){
 const baseShowTextForTopic = showText;
 showText = function(){
     baseShowTextForTopic();
-    updateTopicLevelBar();
+    scheduleTopicLevelBarUpdate();
 };
 
 const baseSetModeForTopic = setMode;
 setMode = function(mode){
     baseSetModeForTopic(mode);
-    updateTopicLevelBar();
+    scheduleTopicLevelBarUpdate();
 };
 
 function getGoChuLearningPoolHealth(){
     return {
         topicPoolEntries: goChuTopicPoolCache.size,
         levelPoolEntries: goChuLevelPoolCache.size,
+        summaryCacheEntries: goChuTopicSummaryCache.size,
         selectedTopicId,
         selectedLevelMode,
-        effectiveLevel: currentMode === "easy" ? getEffectiveLearningLevel() : null
+        effectiveLevel: currentMode === "easy" ? getEffectiveLearningLevel() : null,
+        lastEasySourcePoolSize: goChuLastEasySourcePoolSize,
+        lastEasyRoundSize: goChuLastEasyRoundSize,
+        lastEasyRoundBuildMs: Math.round(goChuLastEasyRoundBuildMs * 100) / 100,
+        uiUpdateScheduled: Boolean(goChuTopicLevelUiFrame)
     };
 }
 window.getGoChuLearningPoolHealth = getGoChuLearningPoolHealth;
 
 normalizeSavedLevelForTopic();
 ensureTopicLevelBar();
-updateTopicLevelBar();
+scheduleTopicLevelBarUpdate();
