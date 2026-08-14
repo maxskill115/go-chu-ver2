@@ -1,0 +1,147 @@
+/* ===== VER2 PHASE 5 - NHỚ RỒI GÕ ===== */
+.memory-mode-bar{
+    margin:12px 0 14px;
+    display:grid;
+    grid-template-columns:auto auto auto minmax(120px,1fr);
+    gap:10px;
+    align-items:end;
+    padding:10px 12px;
+    border:1px solid rgba(136,204,255,.32);
+    border-radius:14px;
+    background:rgba(10,28,50,.58);
+}
+
+.memory-mode-bar.hidden-by-mode{
+    display:none;
+}
+
+.memory-mode-bar.active{
+    border-color:rgba(255,215,0,.58);
+    box-shadow:0 0 0 2px rgba(255,215,0,.08);
+}
+
+.memory-mode-btn{
+    min-height:44px;
+    padding:10px 16px;
+    border-radius:12px;
+    border:2px solid #6f98bd;
+    background:#274d70;
+    color:#fff;
+    font-size:16px;
+    font-weight:850;
+    cursor:pointer;
+}
+
+.memory-mode-btn.primary{
+    background:linear-gradient(135deg,#62511a,#8b6f12);
+    border-color:#d5b943;
+}
+
+.memory-mode-field{
+    display:grid;
+    gap:4px;
+    color:#cfe6fa;
+    font-size:12px;
+    font-weight:800;
+}
+
+.memory-mode-select{
+    min-height:44px;
+    padding:8px 30px 8px 10px;
+    border-radius:10px;
+    border:1px solid #668baa;
+    background:#102945;
+    color:#fff;
+    font-size:15px;
+    font-weight:750;
+}
+
+.memory-mode-select:disabled{
+    opacity:.62;
+}
+
+.memory-mode-status{
+    align-self:center;
+    justify-self:end;
+    min-width:0;
+    font-size:15px;
+    font-weight:850;
+    color:#ffe77a;
+    text-align:right;
+}
+
+#text.memory-prompt-hidden{
+    color:transparent !important;
+    text-shadow:none !important;
+    user-select:none;
+    position:relative;
+}
+
+#text.memory-prompt-hidden::after{
+    content:"🧠 Nhớ lại rồi gõ";
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#d8efff;
+    font-size:clamp(24px,4vw,34px);
+    font-weight:900;
+    text-shadow:0 0 12px rgba(136,204,255,.25);
+}
+
+.memory-mode-active #smartReviewBar{
+    display:none;
+}
+
+.memory-mode-active .typing-input:disabled{
+    opacity:.58;
+    cursor:wait;
+}
+
+.memory-mode-active #nextBtn:disabled{
+    opacity:.5;
+    cursor:wait;
+    transform:none;
+}
+
+@media (max-width:768px){
+    .memory-mode-bar{
+        grid-template-columns:1fr 1fr;
+        gap:8px;
+        align-items:stretch;
+    }
+
+    .memory-mode-btn{
+        grid-column:1 / -1;
+        width:100%;
+    }
+
+    .memory-mode-status{
+        grid-column:1 / -1;
+        justify-self:center;
+        text-align:center;
+    }
+
+    .memory-mode-select{
+        width:100%;
+    }
+}
+
+@media (max-height:560px) and (orientation:landscape){
+    .memory-mode-bar{
+        margin:6px 0 8px;
+        padding:6px 8px;
+    }
+
+    .memory-mode-btn,
+    .memory-mode-select{
+        min-height:38px;
+        padding-top:6px;
+        padding-bottom:6px;
+    }
+
+    .memory-mode-status{
+        font-size:13px;
+    }
+}
