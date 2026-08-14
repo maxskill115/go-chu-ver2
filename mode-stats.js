@@ -26,7 +26,6 @@ function normalizeModeStats(source){
     return output;
 }
 
-/* Mở rộng schema profile mà không sửa trực tiếp Phase 7. */
 const baseNormalizeProfileDataForModeStats = normalizeProfileData;
 normalizeProfileData = function(data){
     const normalized = baseNormalizeProfileDataForModeStats(data);
@@ -40,6 +39,23 @@ createDefaultProfileData = function(useLegacy = false){
     data.modeStats = createEmptyModeStats();
     return data;
 };
+
+function readStoredModeStats(profileId){
+    if(!profileId) return createEmptyModeStats();
+    try {
+        const raw = localStorage.getItem(profileDataKey(profileId));
+        const parsed = safeJsonParse(raw, {});
+        return normalizeModeStats(parsed?.modeStats);
+    } catch (error) {
+        return createEmptyModeStats();
+    }
+}
+
+function hydrateActiveModeStatsFromStorage(){
+    if(!activeProfileData || !activeProfileId) return createEmptyModeStats();
+    activeProfileData.modeStats = readStoredModeStats(activeProfileId);
+    return activeProfileData.modeStats;
+}
 
 function ensureActiveModeStats(){
     if(!activeProfileData) return createEmptyModeStats();
@@ -99,25 +115,18 @@ function resetFreeModeAttemptGuard(){
     freeCorrectRecordedForTarget = false;
 }
 
-/* showText chạy cho Normal/Hard nên dùng làm ranh giới prompt Hard mới. */
 const baseShowTextForModeStats = showText;
 showText = function(){
     resetHardModeAttemptGuard();
     return baseShowTextForModeStats();
 };
 
-/* setFreeTarget chạy mỗi khi đổi bài/đoạn Free. */
 const baseSetFreeTargetForModeStats = setFreeTarget;
 setFreeTarget = function(text){
     resetFreeModeAttemptGuard();
     return baseSetFreeTargetForModeStats(text);
 };
 
-/*
- * Hard dùng checkNext chung với Normal. Mỗi prompt:
- * - sai nhiều lần chỉ tính tối đa 1 lần sai;
- * - khi giải đúng tính 1 lần đúng.
- */
 const baseCheckNextForModeStats = checkNext;
 checkNext = function(){
     if(currentMode !== "hard"){
@@ -140,7 +149,6 @@ checkNext = function(){
     return resultValue;
 };
 
-/* Free có submit riêng trong script.js, vì vậy module phải nạp sau script.js. */
 const baseSubmitFreeAnswerForModeStats = submitFreeAnswer;
 submitFreeAnswer = function(){
     if(!freeTarget) return baseSubmitFreeAnswerForModeStats();
@@ -161,10 +169,14 @@ submitFreeAnswer = function(){
     return resultValue;
 };
 
-/* Khi đổi hồ sơ, reset guard và đảm bảo schema modeStats của bé mới. */
+/*
+ * Phase 9 đợt 11:
+ * hydrate modeStats TRƯỚC base apply để dashboard (nếu đang mở) render đúng profile mới.
+ */
 const baseApplyProfileToRuntimeForModeStats = applyProfileToRuntime;
-applyProfileToRuntime = function(rebuild = true){
-    const resultValue = baseApplyProfileToRuntimeForModeStats(rebuild);
+applyProfileToRuntime = function(rebuild = true, refreshUi = true){
+    hydrateActiveModeStatsFromStorage();
+    const resultValue = baseApplyProfileToRuntimeForModeStats(rebuild, refreshUi);
     ensureActiveModeStats();
     resetHardModeAttemptGuard();
     resetFreeModeAttemptGuard();
@@ -240,13 +252,11 @@ function renderModeStatsDashboard(){
     replaceProfileSummaryValue("Chính xác", totalAttempts ? `${Math.round(totalCorrect / totalAttempts * 100)}%` : "—");
 }
 
-/* Bọc dashboard SAU vietnamese-dashboard.js để giữ cả card Lỗi dấu Phase 8. */
 const baseRenderProfileDashboardForModeStats = renderProfileDashboard;
 renderProfileDashboard = function(){
     baseRenderProfileDashboardForModeStats();
     renderModeStatsDashboard();
 };
 
-ensureActiveModeStats();
-saveProfileData(activeProfileId, activeProfileData);
-renderProfileDashboard();
+/* Startup chỉ hydrate in-memory; không save/render dashboard eager. */
+hydrateActiveModeStatsFromStorage();

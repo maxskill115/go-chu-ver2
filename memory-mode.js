@@ -25,6 +25,9 @@ function saveMemoryNumber(key, value){
 }
 
 function getPromptWordCount(prompt){
+    if(typeof getCachedPromptWordCount === "function"){
+        return getCachedPromptWordCount(prompt);
+    }
     return String(prompt || "").trim().split(/\s+/).filter(Boolean).length;
 }
 
@@ -38,7 +41,10 @@ function shuffleMemoryPrompts(items){
 }
 
 function buildMemoryRound(previousPrompt = ""){
-    const eligible = [...new Set(easyWords)].filter(prompt => getPromptWordCount(prompt) === memoryWordCount);
+    const source = typeof GO_CHU_UNIQUE_EASY_PROMPTS !== "undefined"
+        ? GO_CHU_UNIQUE_EASY_PROMPTS
+        : [...new Set(easyWords)];
+    const eligible = source.filter(prompt => getPromptWordCount(prompt) === memoryWordCount);
     const round = shuffleMemoryPrompts(eligible);
 
     if(typeof getWeakPromptRecords === "function"){

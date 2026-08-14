@@ -110,6 +110,7 @@ function saveProfileData(profileId, data){
 }
 
 function initializeProfileSystem(){
+    const startedAt = performance.now();
     profiles = loadProfilesRegistry();
     const isFirstSetup = profiles.length === 0;
 
@@ -125,13 +126,23 @@ function initializeProfileSystem(){
         try {
             storedActive = localStorage.getItem(GO_CHU_ACTIVE_PROFILE_KEY) || "";
         } catch (error) {}
-        activeProfileId = profiles.some(item => item.id === storedActive) ? storedActive : profiles[0].id;
-        activeProfileData = loadProfileData(activeProfileId) || createDefaultProfileData(false);
-        saveProfileData(activeProfileId, activeProfileData);
-        saveProfilesRegistry();
+
+        const hasStoredActive = profiles.some(item => item.id === storedActive);
+        activeProfileId = hasStoredActive ? storedActive : profiles[0].id;
+        const loaded = loadProfileData(activeProfileId);
+        activeProfileData = loaded || createDefaultProfileData(false);
+
+        /* Không stringify/write lại toàn bộ profile ở mỗi startup nếu dữ liệu đã tồn tại. */
+        if(!loaded) saveProfileData(activeProfileId, activeProfileData);
+        if(!hasStoredActive){
+            try { localStorage.setItem(GO_CHU_ACTIVE_PROFILE_KEY, activeProfileId); } catch (error) {}
+        }
     }
 
-    applyProfileToRuntime(false);
+    /* Startup chỉ route state; UI phụ chờ script startup/setMode hoặc khi người dùng mở. */
+    applyProfileToRuntime(false, false);
+    if(typeof goChuStartupMeasure === "function") goChuStartupMeasure("profile:init", startedAt);
+    if(typeof goChuStartupMark === "function") goChuStartupMark("profileReady");
 }
 
 function getActiveProfile(){
@@ -172,7 +183,7 @@ function stopTransientLearningModes(){
     }
 }
 
-function applyProfileToRuntime(rebuild = true){
+function applyProfileToRuntime(rebuild = true, refreshUi = true){
     activeProfileData = normalizeProfileData(activeProfileData || createDefaultProfileData(false));
     promptStats = activeProfileData.promptStats;
 
@@ -199,16 +210,18 @@ function applyProfileToRuntime(rebuild = true){
     if(rebuild && currentMode === "easy"){
         texts = buildSmartEasyRound(currentPrompt);
         index = 0;
-        if(!texts.length) texts = getTopicPool();
+        if(!texts.length) texts = [...getTopicPool()];
         if(texts.length) showText();
     }
+
+    if(!refreshUi) return;
 
     if(typeof updateSmartReviewBar === "function") updateSmartReviewBar();
     if(typeof updateMemoryModeBar === "function") updateMemoryModeBar();
     if(typeof updateListenModeBar === "function") updateListenModeBar();
     if(typeof updateTopicLevelBar === "function") updateTopicLevelBar();
     updateProfileHud();
-    renderProfileDashboard();
+    if(document.getElementById("profileDashboardOverlay")) renderProfileDashboard();
 }
 
 function switchProfile(profileId){
@@ -220,7 +233,7 @@ function switchProfile(profileId){
     activeProfileId = profileId;
     activeProfileData = loadProfileData(profileId) || createDefaultProfileData(false);
     saveProfilesRegistry();
-    applyProfileToRuntime(true);
+    applyProfileToRuntime(true, true);
 
     if(typeof showCenterToast === "function"){
         const profile = getActiveProfile();
@@ -228,7 +241,6 @@ function switchProfile(profileId){
     }
 }
 
-/* ===== GẮN LOCALSTORAGE HIỆN CÓ VÀO HỒ SƠ ĐANG ACTIVE ===== */
 savePromptStats = function(){
     if(!activeProfileData) return;
     activeProfileData.promptStats = promptStats;
@@ -256,7 +268,6 @@ function getLocalDayKey(date = new Date()){
     return `${y}-${m}-${d}`;
 }
 
-/* startStudyTimer được gọi sau cùng trong script.js, nên override tại đây. */
 startStudyTimer = function(){
     if(profileStudyTimer) return;
     studyTime.textContent = formatStudyDuration(studySeconds);
@@ -334,13 +345,7 @@ function getTopicStatsRows(){
                 wrong += Number(entry?.wrong || 0);
             });
             const attempts = correct + wrong;
-            return {
-                ...topic,
-                attempts,
-                correct,
-                wrong,
-                accuracy: attempts ? correct / attempts : 0
-            };
+            return { ...topic, attempts, correct, wrong, accuracy: attempts ? correct / attempts : 0 };
         });
 }
 
@@ -362,8 +367,6 @@ function ensureProfileHud(){
         });
         gameMenuBtn.insertAdjacentElement("afterend", button);
     }
-
-    ensureProfileDashboard();
 }
 
 function updateProfileHud(){
@@ -457,8 +460,8 @@ function ensureProfileDashboard(){
 
 function openProfileDashboard(){
     syncRuntimeIntoProfile();
-    renderProfileDashboard();
     const overlay = ensureProfileDashboard();
+    renderProfileDashboard();
     overlay.classList.remove("hidden");
     document.body.classList.add("profile-dashboard-open");
 }
@@ -608,7 +611,7 @@ function deleteActiveProfileFromDashboard(){
     activeProfileData = loadProfileData(next.id) || createDefaultProfileData(false);
     saveProfilesRegistry();
     stopTransientLearningModes();
-    applyProfileToRuntime(true);
+    applyProfileToRuntime(true, true);
     renderProfileDashboard();
 }
 
@@ -705,7 +708,7 @@ async function importProfilesBackup(event){
         activeProfileData = loadProfileData(activeProfileId) || createDefaultProfileData(false);
         saveProfilesRegistry();
         stopTransientLearningModes();
-        applyProfileToRuntime(true);
+        applyProfileToRuntime(true, true);
         renderProfileDashboard();
         if(typeof showCenterToast === "function") showCenterToast("✅ Đã nhập backup", "correct");
     } catch (error) {
@@ -716,7 +719,7 @@ async function importProfilesBackup(event){
 initializeProfileSystem();
 ensureProfileHud();
 updateProfileHud();
-renderProfileDashboard();
+/* Dashboard DOM/stats chỉ dựng khi bấm 👤. */
 
 document.addEventListener("visibilitychange", () => {
     if(document.visibilityState === "hidden") syncRuntimeIntoProfile();

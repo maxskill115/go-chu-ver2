@@ -6,6 +6,10 @@ let selectedTopicId = loadTopicSetting();
 let selectedLevelMode = loadLevelSetting();
 let lastAutoLevel = null;
 
+/* ===== PHASE 9 ĐỢT 11 - CACHE POOL TĨNH ===== */
+const goChuTopicPoolCache = new Map();
+const goChuLevelPoolCache = new Map();
+
 function loadTopicSetting(){
     try {
         const value = localStorage.getItem(GO_CHU_TOPIC_KEY) || "all";
@@ -31,11 +35,30 @@ function saveTopicLevelSetting(key, value){
 }
 
 function getTopicPool(topicId = selectedTopicId){
-    return [...new Set(easyWords)].filter(prompt => promptMatchesTopic(prompt, topicId));
+    const key = topicId || "all";
+    if(goChuTopicPoolCache.has(key)) return goChuTopicPoolCache.get(key);
+
+    const source = typeof GO_CHU_UNIQUE_EASY_PROMPTS !== "undefined"
+        ? GO_CHU_UNIQUE_EASY_PROMPTS
+        : [...new Set(easyWords)];
+    const pool = key === "all"
+        ? [...source]
+        : source.filter(prompt => promptMatchesTopic(prompt, key));
+    const frozen = Object.freeze(pool);
+    goChuTopicPoolCache.set(key, frozen);
+    return frozen;
 }
 
 function getLevelPool(topicId, wordCount){
-    return getTopicPool(topicId).filter(prompt => getPromptWordCount(prompt) === wordCount);
+    const topicKey = topicId || "all";
+    const count = Number(wordCount);
+    const cacheKey = `${topicKey}:${count}`;
+    if(goChuLevelPoolCache.has(cacheKey)) return goChuLevelPoolCache.get(cacheKey);
+
+    const pool = getTopicPool(topicKey).filter(prompt => getPromptWordCount(prompt) === count);
+    const frozen = Object.freeze(pool);
+    goChuLevelPoolCache.set(cacheKey, frozen);
+    return frozen;
 }
 
 function normalizeSavedLevelForTopic(){
@@ -94,28 +117,35 @@ function promptMatchesCurrentTopic(prompt){
     return promptMatchesTopic(prompt, selectedTopicId);
 }
 
-function promptMatchesCurrentLevel(prompt){
-    return getPromptWordCount(prompt) === getEffectiveLearningLevel();
+function promptMatchesCurrentLevel(prompt, effectiveLevel = null){
+    const level = effectiveLevel == null ? getEffectiveLearningLevel() : Number(effectiveLevel);
+    return getPromptWordCount(prompt) === level;
 }
 
-function promptMatchesLearningFilters(prompt, respectLevel = true){
+function promptMatchesLearningFilters(prompt, respectLevel = true, effectiveLevel = null){
     if(!promptMatchesCurrentTopic(prompt)) return false;
     if(!respectLevel) return true;
-    return promptMatchesCurrentLevel(prompt);
+    return promptMatchesCurrentLevel(prompt, effectiveLevel);
 }
 
 const baseGetWeakPromptRecordsForTopic = getWeakPromptRecords;
 getWeakPromptRecords = function(){
     const respectLevel = !(typeof memoryModeActive !== "undefined" && memoryModeActive);
+    const effectiveLevel = respectLevel ? getEffectiveLearningLevel() : null;
     return baseGetWeakPromptRecordsForTopic().filter(item =>
-        promptMatchesLearningFilters(item.prompt, respectLevel)
+        promptMatchesLearningFilters(item.prompt, respectLevel, effectiveLevel)
     );
 };
 
 const baseBuildSmartEasyRoundForTopic = buildSmartEasyRound;
 buildSmartEasyRound = function(previousPrompt = ""){
+    /* QUAN TRỌNG: level chỉ tính 1 lần cho cả round, không tính lại cho từng prompt. */
+    const effectiveLevel = getEffectiveLearningLevel();
     const filtered = baseBuildSmartEasyRoundForTopic(previousPrompt)
-        .filter(prompt => promptMatchesLearningFilters(prompt, true));
+        .filter(prompt =>
+            promptMatchesTopic(prompt, selectedTopicId) &&
+            getPromptWordCount(prompt) === effectiveLevel
+        );
 
     if(previousPrompt && filtered.length > 1 && filtered[0] === previousPrompt){
         const swapIndex = filtered.findIndex((prompt, i) => i > 0 && prompt !== previousPrompt);
@@ -130,7 +160,7 @@ buildSmartEasyRound = function(previousPrompt = ""){
 const baseBuildMemoryRoundForTopic = buildMemoryRound;
 buildMemoryRound = function(previousPrompt = ""){
     const filtered = baseBuildMemoryRoundForTopic(previousPrompt)
-        .filter(prompt => promptMatchesCurrentTopic(prompt));
+        .filter(prompt => promptMatchesTopic(prompt, selectedTopicId));
 
     if(previousPrompt && filtered.length > 1 && filtered[0] === previousPrompt){
         const swapIndex = filtered.findIndex((prompt, i) => i > 0 && prompt !== previousPrompt);
@@ -237,7 +267,7 @@ function rebuildTopicLearningRound(){
     index = 0;
 
     if(!texts.length){
-        texts = getTopicPool();
+        texts = [...getTopicPool()];
     }
 
     if(texts.length) showText();
@@ -252,22 +282,26 @@ function updateTopicLevelBar(){
     if(!bar || !topicSelect || !levelSelect || !status) return;
 
     const isEasy = currentMode === "easy";
+    bar.classList.toggle("hidden-by-mode", !isEasy);
+    bar.setAttribute("aria-hidden", isEasy ? "false" : "true");
+
+    /* Ngoài Easy không tính summary/pool vô ích. */
+    if(!isEasy){
+        status.textContent = "";
+        levelSelect.disabled = true;
+        return;
+    }
+
     const memoryActive = typeof memoryModeActive !== "undefined" && memoryModeActive;
     const topic = getTopicById(selectedTopicId);
     const effectiveLevel = getEffectiveLearningLevel();
     const poolCount = memoryActive
-        ? getTopicPool().filter(prompt => getPromptWordCount(prompt) === memoryWordCount).length
+        ? getLevelPool(selectedTopicId, memoryWordCount).length
         : getLevelPool(selectedTopicId, effectiveLevel).length;
 
-    bar.classList.toggle("hidden-by-mode", !isEasy);
     topicSelect.value = selectedTopicId;
     levelSelect.value = selectedLevelMode;
     levelSelect.disabled = memoryActive;
-
-    if(!isEasy){
-        status.textContent = "";
-        return;
-    }
 
     if(memoryActive){
         status.textContent = `${topic.icon} ${topic.label} · Memory ${memoryWordCount} từ · ${poolCount} nội dung`;
@@ -309,6 +343,17 @@ setMode = function(mode){
     baseSetModeForTopic(mode);
     updateTopicLevelBar();
 };
+
+function getGoChuLearningPoolHealth(){
+    return {
+        topicPoolEntries: goChuTopicPoolCache.size,
+        levelPoolEntries: goChuLevelPoolCache.size,
+        selectedTopicId,
+        selectedLevelMode,
+        effectiveLevel: currentMode === "easy" ? getEffectiveLearningLevel() : null
+    };
+}
+window.getGoChuLearningPoolHealth = getGoChuLearningPoolHealth;
 
 normalizeSavedLevelForTopic();
 ensureTopicLevelBar();

@@ -3,6 +3,7 @@
  */
 let goChuLastProfileOpener = null;
 let goChuLastGameOpener = null;
+let goChuObservedProfileOverlay = null;
 
 function isElementVisible(element){
     if(!element) return false;
@@ -60,8 +61,12 @@ function setupDialogSemantics(){
 
     const profileButton = document.getElementById("profileDashboardBtn");
     const profileOverlay = document.getElementById("profileDashboardOverlay");
-    if(profileButton && profileOverlay){
+    if(profileButton){
+        /* Overlay có thể được tạo lazy sau startup. */
         profileButton.setAttribute("aria-controls", "profileDashboardOverlay");
+    }
+    if(profileOverlay){
+        profileOverlay.setAttribute("aria-hidden", profileOverlay.classList.contains("hidden") ? "true" : "false");
     }
 
     const resultEl = document.getElementById("result");
@@ -143,6 +148,21 @@ function observeVisibility(element, type){
     observer.observe(element, { attributes: true, attributeFilter: ["class"] });
 }
 
+function bindLazyProfileOverlay(){
+    const overlay = document.getElementById("profileDashboardOverlay");
+    if(!overlay || overlay === goChuObservedProfileOverlay) return;
+    goChuObservedProfileOverlay = overlay;
+    observeVisibility(overlay, "profile");
+    setupDialogSemantics();
+    syncAccessibilityState();
+}
+
+function observeLazyProfileCreation(){
+    if(typeof MutationObserver === "undefined") return;
+    const observer = new MutationObserver(() => bindLazyProfileOverlay());
+    observer.observe(document.body, { childList: true });
+}
+
 function observeSettingsPanel(){
     const panel = document.getElementById("settingsPanel");
     if(!panel || typeof MutationObserver === "undefined") return;
@@ -192,7 +212,8 @@ function initGoChuAccessibility(){
     profileButton?.addEventListener("click", () => { goChuLastProfileOpener = profileButton; }, true);
     gameButton?.addEventListener("click", () => { goChuLastGameOpener = gameButton; }, true);
 
-    observeVisibility(document.getElementById("profileDashboardOverlay"), "profile");
+    bindLazyProfileOverlay();
+    observeLazyProfileCreation();
     observeVisibility(document.getElementById("game-selector-overlay"), "game");
     observeSettingsPanel();
 

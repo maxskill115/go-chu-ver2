@@ -1,4 +1,8 @@
-/* ===== VER2 PHASE 3 + OFFLINE VISUAL ===== */
+/* ===== VER2 PHASE 3 + OFFLINE VISUAL + PHASE 9 PERF ===== */
+const goChuVisualMatchCache = new Map();
+let goChuVisualFrame = 0;
+let goChuVisualRequestToken = 0;
+
 function normalizeVisualPrompt(text){
     return normalizeParagraph(String(text || ""))
         .normalize("NFC")
@@ -6,35 +10,35 @@ function normalizeVisualPrompt(text){
         .trim();
 }
 
-function visualRuleMatches(rule, normalized){
-    const exact = Array.isArray(rule.exact) ? rule.exact : [];
-    const contains = Array.isArray(rule.contains) ? rule.contains : [];
+const GO_CHU_COMPILED_VISUAL_RULES = promptVisualRules.map(rule => ({
+    rule,
+    exact: new Set((Array.isArray(rule.exact) ? rule.exact : []).map(normalizeVisualPrompt).filter(Boolean)),
+    contains: (Array.isArray(rule.contains) ? rule.contains : []).map(normalizeVisualPrompt).filter(Boolean)
+}));
 
-    if(exact.some(value => normalizeVisualPrompt(value) === normalized)) return true;
-
-    return contains.some(value => {
-        const phrase = normalizeVisualPrompt(value);
-        return phrase && normalized.includes(phrase);
-    });
+function visualRuleMatches(compiled, normalized){
+    if(compiled.exact.has(normalized)) return true;
+    return compiled.contains.some(phrase => normalized.includes(phrase));
 }
 
 function getPromptVisual(prompt){
     const normalized = normalizeVisualPrompt(prompt);
     if(!normalized) return null;
+    if(goChuVisualMatchCache.has(normalized)) return goChuVisualMatchCache.get(normalized);
 
-    const rule = promptVisualRules.find(item => visualRuleMatches(item, normalized));
-    if(!rule) return null;
+    const compiled = GO_CHU_COMPILED_VISUAL_RULES.find(item => visualRuleMatches(item, normalized));
+    if(!compiled){
+        goChuVisualMatchCache.set(normalized, null);
+        return null;
+    }
 
+    const rule = compiled.rule;
     const localMap = window.GO_CHU_TWEMOJI_LOCAL || {};
     const localSrc = localMap[rule.code] || "";
     const cdnSrc = `${GO_CHU_VISUAL_ASSET_BASE}/${rule.code}.svg`;
-
-    return {
-        ...rule,
-        src: localSrc || cdnSrc,
-        localSrc,
-        cdnSrc
-    };
+    const visual = { ...rule, src: localSrc || cdnSrc, localSrc, cdnSrc };
+    goChuVisualMatchCache.set(normalized, visual);
+    return visual;
 }
 
 function ensurePromptVisual(){
@@ -50,7 +54,8 @@ function ensurePromptVisual(){
     image.id = "promptVisualImage";
     image.className = "prompt-visual-image";
     image.decoding = "async";
-    image.loading = "eager";
+    image.loading = "lazy";
+    try { image.fetchPriority = "low"; } catch (error) {}
 
     const fallback = document.createElement("span");
     fallback.id = "promptVisualFallback";
@@ -63,9 +68,14 @@ function ensurePromptVisual(){
 }
 
 function hidePromptVisual(){
-    const wrap = ensurePromptVisual();
+    cancelAnimationFrame(goChuVisualFrame);
+    goChuVisualFrame = 0;
+    goChuVisualRequestToken += 1;
+
+    const wrap = document.getElementById("promptVisualWrap");
     const image = document.getElementById("promptVisualImage");
     const fallback = document.getElementById("promptVisualFallback");
+    if(!wrap || !image || !fallback) return;
 
     wrap.classList.add("hidden");
     image.classList.add("hidden");
@@ -75,9 +85,9 @@ function hidePromptVisual(){
     image.dataset.visualSource = "";
 }
 
-function updatePromptVisual(prompt){
-    /* Visual chỉ thuộc Easy. Hard/Free luôn ẩn hẳn. */
-    if(currentMode !== "easy"){
+function updatePromptVisualNow(prompt, requestToken){
+    if(requestToken !== goChuVisualRequestToken) return;
+    if(currentMode !== "easy" || prompt !== currentPrompt){
         hidePromptVisual();
         return;
     }
@@ -101,6 +111,7 @@ function updatePromptVisual(prompt){
     let triedCdn = !visual.localSrc;
 
     image.onload = () => {
+        if(requestToken !== goChuVisualRequestToken || prompt !== currentPrompt) return;
         image.classList.remove("hidden");
         fallback.classList.add("hidden");
         image.dataset.visualSource = visual.localSrc && image.src.includes(visual.localSrc)
@@ -109,6 +120,7 @@ function updatePromptVisual(prompt){
     };
 
     image.onerror = () => {
+        if(requestToken !== goChuVisualRequestToken || prompt !== currentPrompt) return;
         if(!triedCdn && visual.cdnSrc && image.src !== visual.cdnSrc){
             triedCdn = true;
             image.dataset.visualSource = "cdn-fallback";
@@ -125,6 +137,25 @@ function updatePromptVisual(prompt){
     image.src = visual.src;
 }
 
+function schedulePromptVisual(prompt = currentPrompt){
+    cancelAnimationFrame(goChuVisualFrame);
+    const requestToken = ++goChuVisualRequestToken;
+
+    if(currentMode !== "easy"){
+        hidePromptVisual();
+        return;
+    }
+
+    goChuVisualFrame = requestAnimationFrame(() => {
+        goChuVisualFrame = 0;
+        updatePromptVisualNow(String(prompt || ""), requestToken);
+    });
+}
+
+function updatePromptVisual(prompt){
+    schedulePromptVisual(prompt);
+}
+
 function getGoChuVisualHealth(){
     const localMap = window.GO_CHU_TWEMOJI_LOCAL || {};
     const meta = window.GO_CHU_TWEMOJI_META || {};
@@ -138,7 +169,8 @@ function getGoChuVisualHealth(){
         localCount,
         coveragePercent: uniqueCodes.length ? Math.round((localCount / uniqueCodes.length) * 100) : 0,
         currentSource: image?.dataset?.visualSource || "",
-        currentPromptHasRule: Boolean(getPromptVisual(currentPrompt))
+        currentPromptHasRule: Boolean(getPromptVisual(currentPrompt)),
+        matchCacheSize: goChuVisualMatchCache.size
     };
 }
 
@@ -147,14 +179,12 @@ window.getGoChuVisualHealth = getGoChuVisualHealth;
 const baseShowTextForVisual = showText;
 showText = function(){
     baseShowTextForVisual();
-    updatePromptVisual(currentPrompt);
+    schedulePromptVisual(currentPrompt);
 };
 
 const baseSetModeForVisual = setMode;
 setMode = function(mode){
     baseSetModeForVisual(mode);
-    updatePromptVisual(currentPrompt);
+    if(mode === "easy") schedulePromptVisual(currentPrompt);
+    else hidePromptVisual();
 };
-
-ensurePromptVisual();
-updatePromptVisual(currentPrompt);
