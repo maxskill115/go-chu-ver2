@@ -128,13 +128,15 @@ Không triển khai nhiều feature cùng lúc. Hoàn tất, kiểm tra và ghi 
 - Lần ghi đầu tiên bị GitHub trả `403 Resource not accessible by integration` vì quyền GitHub App chưa được cập nhật.
 - Người dùng đã cấp lại quyền; kiểm tra ghi file thành công.
 - Quy ước mới theo yêu cầu người dùng: **mọi công việc và cả plan phát triển phải cập nhật vào HANDOFF**.
-- Đang đưa baseline lên `main`.
+- Baseline code đã được đưa lên `main`: `index.html`, dữ liệu Đơn giản/Nâng cao/Tự do, logic JS và CSS responsive.
+- Đã kiểm tra cú pháp các file JavaScript sau khi tách bằng `node --check`: đạt.
+- Audio binary vẫn là việc tồn đọng đã ghi ở phần Ghi chú repo.
 - Feature tiếp theo ngay sau baseline: **Phase 1 — chỉ rõ ký tự gõ sai**.
 
 ## 7. Việc tiếp theo
 
-1. Hoàn tất commit baseline trên GitHub.
-2. Áp dụng code Phase 1 vào `script.js` và `styles.css`.
-3. Cập nhật phần Nhật ký + trạng thái Phase 1 trong `HANDOFF.md`.
-4. Kiểm tra cú pháp JavaScript.
-5. Sau khi Phase 1 ổn định mới bắt đầu Phase 2.
+1. Áp dụng Phase 1 — chỉ rõ ký tự gõ sai/thừa/thiếu.
+2. Cập nhật Nhật ký + trạng thái Phase 1 trong `HANDOFF.md` trong cùng đợt thay đổi.
+3. Kiểm tra cú pháp JavaScript và giao diện responsive.
+4. Sau khi Phase 1 ổn định mới bắt đầu Phase 2.
+5. Bổ sung lại audio binary vào remote khi có luồng upload binary phù hợp.
