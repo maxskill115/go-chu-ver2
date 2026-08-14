@@ -1,0 +1,62 @@
+/* ===== VER2 PHASE 2 - RANDOM THÔNG MINH + ÔN LỖI ===== */
+.smart-review-bar {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid rgba(136, 204, 255, 0.28);
+    border-radius: 12px;
+    background: rgba(15, 32, 54, 0.62);
+}
+
+.smart-review-bar.review-active {
+    border-color: rgba(255, 215, 0, 0.62);
+    background: rgba(70, 54, 12, 0.38);
+}
+
+.smart-review-info {
+    color: #cfeaff;
+    font-size: 15px;
+    font-weight: 700;
+    text-align: left;
+}
+
+.smart-review-btn {
+    flex: 0 0 auto;
+    padding: 9px 14px;
+    border: 1px solid #88ccff;
+    border-radius: 10px;
+    background: rgba(47, 91, 130, 0.9);
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.smart-review-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: #ffd700;
+}
+
+.smart-review-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+@media (max-width: 600px) {
+    .smart-review-bar {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+
+    .smart-review-info {
+        text-align: center;
+    }
+
+    .smart-review-btn {
+        width: 100%;
+    }
+}
