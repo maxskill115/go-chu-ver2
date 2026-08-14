@@ -1,225 +1,381 @@
 # Runtime architecture — go-chu-ver2
 
-Tài liệu này ghi **thứ tự nạp module và chuỗi wrapper runtime** để tránh regression khi tiếp tục phát triển.
+Tài liệu này khóa **load order, wrapper chain và invariant hiệu năng** của project.
 
-## Nguyên tắc
+## 1. Nguyên tắc
 
-- Không đổi thứ tự `<script>` nếu chưa audit lại chuỗi wrapper.
-- Module mới không được ghi Hard/Free vào `promptStats` của Easy.
-- Nếu cần bọc `showText`, `setMode`, `checkNext`, `setListenMode`, `setMemoryMode`, phải lưu base function trước rồi gọi base đúng một lần, trừ khi tài liệu này ghi rõ module **thay implementation** có chủ đích.
-- Module cần hàm được khai báo trong `script.js` phải nạp **sau `script.js`**.
-- Module storage chỉ được thay cách persistence tương đương, không đổi schema/cadence học.
-- Module asset không thay asset gốc; chỉ probe/fallback khi asset lỗi.
-- Module accessibility không được bọc logic học; chỉ quan sát DOM/trạng thái UI.
+- Không đổi thứ tự `<script>` nếu chưa audit wrapper.
+- Hard/Free không được ghi vào `promptStats` adaptive của Easy.
+- Wrapper phải lưu base function và gọi base đúng một lần, trừ implementation replacement đã ghi rõ.
+- Không thêm network/storage/dashboard work vào frame đầu của Easy.
 - Google credential/API key không được đưa vào browser/runtime.
-- Debug/smoke-test nạp cuối cùng và không thay đổi hành vi học.
+- Module accessibility không được bọc logic học.
+- Debug/smoke-test không được thay hành vi học.
 
-## Load order hiện tại
+## 2. Load order hiện tại
 
-1. `data-easy.js`
-2. `tts-manifest.js`
-3. `data-poems.js`
-4. `visual-data.js`
-5. `twemoji-local-manifest.js`
-6. `topic-data.js`
-7. `script-core.js`
-8. `smart-review.js`
-9. `visual-prompt.js`
-10. `listen-mode.js`
-11. `ux-hotfix.js`
-12. `tts-local.js`
-13. `memory-mode.js`
-14. `topic-level.js`
-15. `profile-stats.js`
-16. `vietnamese-input.js`
-17. `vietnamese-dashboard.js`
-18. `script.js`
-19. `mode-stats.js`
-20. `storage-health.js`
-21. `asset-reliability.js`
-22. `accessibility.js`
-23. `debug-smoke.js`
+1. `startup-performance.js`
+2. `data-easy.js`
+3. `tts-manifest.js`
+4. `data-poems.js`
+5. `visual-data.js`
+6. `twemoji-local-manifest.js`
+7. `topic-data.js`
+8. `script-core.js`
+9. `smart-review.js`
+10. `visual-prompt.js`
+11. `listen-mode.js`
+12. `ux-hotfix.js`
+13. `tts-local.js`
+14. `memory-mode.js`
+15. `topic-level.js`
+16. `profile-stats.js`
+17. `vietnamese-input.js`
+18. `vietnamese-dashboard.js`
+19. `startup-runtime-instrument.js`
+20. `script.js`
+21. `stability-fixes.js`
+22. `mode-stats.js`
+23. `storage-health.js`
+24. `asset-reliability.js`
+25. `accessibility.js`
+26. `performance-health.js`
+27. `debug-smoke.js`
 
-## Chuỗi chức năng chính
+`script.js` gọi cuối startup:
+
+```js
+startStudyTimer();
+setMode("easy");
+```
+
+Vì vậy `startup-runtime-instrument.js` phải nạp **trước `script.js`** để đo đúng final wrapper chain khi Easy khởi động.
+
+## 3. Easy startup performance — Phase 9 đợt 11
+
+### Root cause đã xác định
+
+Trước đợt 11, `topic-level.js` lọc từng prompt bằng `promptMatchesLearningFilters()`. Mỗi prompt lại gọi `getEffectiveLearningLevel()`, hàm này tiếp tục dựng topic/level pool bằng cách scan toàn `easyWords`.
+
+Với hàng trăm prompt, startup gần dạng:
+
+```text
+N prompt
+× effective-level calculation
+× scan N prompt
+× normalize/topic-term matching
+```
+
+Đây là hot path gần O(n²) và là nguyên nhân rất mạnh khiến Easy vào trang bị lag/gần treo.
+
+### Cache tĩnh
+
+`topic-data.js` tạo một lần:
+
+```js
+GO_CHU_UNIQUE_EASY_PROMPTS
+GO_CHU_EASY_PROMPT_SET
+goChuTopicNormalizeCache
+goChuTopicMatchCache
+goChuWordCountCache
+```
+
+- normalize topic string được cache;
+- membership prompt/topic được cache;
+- word count được cache;
+- normalized topic terms được compile một lần.
+
+Debug:
+
+```js
+getGoChuTopicCacheHealth()
+```
+
+### Pool cache
+
+`topic-level.js` giữ:
+
+```js
+goChuTopicPoolCache
+goChuLevelPoolCache
+```
+
+`getTopicPool()` và `getLevelPool()` không scan lại `easyWords` sau lần đầu cho cùng key.
+
+Quan trọng nhất, `buildSmartEasyRound()` tính:
+
+```js
+const effectiveLevel = getEffectiveLearningLevel();
+```
+
+**một lần cho cả round**, rồi filter bằng topic + cached word count. Không được quay lại tính effective level cho từng prompt.
+
+Debug:
+
+```js
+getGoChuLearningPoolHealth()
+```
+
+### Smart Review
+
+`getWeakPromptRecords()` dùng `GO_CHU_EASY_PROMPT_SET` thay vì tạo `new Set(easyWords)` mỗi lần.
+
+### Visual deferred
+
+`visual-prompt.js`:
+
+- compile semantic rules một lần;
+- cache prompt → visual mapping;
+- `showText()` chỉ schedule visual bằng `requestAnimationFrame`;
+- image dùng `loading="lazy"`, `decoding="async"`, low fetch priority;
+- stale request không được ghi đè prompt mới.
+
+Thứ tự:
+
+```text
+prompt/input paint
+→ frame kế tiếp
+→ visual mapping / local SVG / CDN / emoji
+```
+
+Debug:
+
+```js
+getGoChuVisualHealth()
+```
+
+### Web Speech lazy
+
+Khi Listen tắt:
+
+- không `getVoices()` ở mỗi `showText`;
+- không dựng voice selector lúc startup;
+- voice runtime chỉ initialize khi bật Listen hoặc mở Settings.
+
+TTS local vẫn theo:
+
+```text
+1. local MP3
+2. Web Speech vi-*
+3. báo thiếu audio
+```
+
+### Profile/dashboard lazy
+
+Startup chỉ load registry + active profile data và route preferences.
+
+Không còn:
+
+```text
+startup → ensureProfileDashboard() → render toàn bộ dashboard
+```
+
+Dashboard DOM + thống kê chỉ dựng khi bấm 👤.
+
+Existing profile không bị stringify/write lại vô điều kiện ở mỗi startup.
+
+Accessibility theo dõi việc dashboard được tạo lazy bằng `MutationObserver`, nên focus trap/ARIA/Escape vẫn hoạt động sau khi mở.
+
+### Asset probing idle
+
+`asset-reliability.js` không probe `../IMG` trong critical startup path.
+
+Nó chạy bằng:
+
+```text
+requestIdleCallback(timeout 1200)
+hoặc setTimeout 700ms
+```
+
+## 4. Startup diagnostics
+
+`startup-performance.js` cung cấp:
+
+```js
+getGoChuStartupPerformance()
+printGoChuStartupPerformance()
+```
+
+Markers hiện có:
+
+```text
+bootstrap
+profileReady
+runtimeWrappersReady
+setModeEasy:start
+setModeEasy:end
+easy:firstPaint
+easy:firstInputReady
+assetProbe:started
+```
+
+Measures:
+
+```text
+profile:init
+setMode:easy
+showText:easy
+```
+
+Performance gate mục tiêu:
+
+```text
+Desktop first input ready < 150 ms
+Mobile tầm trung < 300 ms
+showText không tạo Long Task > 50 ms
+network không block input
+```
+
+CI chỉ khóa regression tĩnh; **latency ms thật phải đo trong browser thật**.
+
+## 5. Wrapper chain
 
 ### `showText`
 
-- `script-core.js`: implementation gốc.
-- `smart-review.js`: reset cờ sai của prompt + cập nhật thanh Ôn lại.
-- `visual-prompt.js`: cập nhật ảnh minh họa.
-- `listen-mode.js`: áp dụng trạng thái che chữ + đọc prompt nếu Listen đang bật.
-- `memory-mode.js`: bắt đầu countdown/che chữ Memory.
-- `topic-level.js`: cập nhật thanh chủ đề/cấp độ.
-- `vietnamese-input.js`: reset accent guard + render progress theo từ + Telex/VNI guide.
-- `mode-stats.js`: reset guard thống kê Hard cho prompt mới.
-
-Phase 10 không bọc `showText`; nó thay `speakPrompt`, nên mọi lời gọi đọc từ wrapper Listen tự đi qua local MP3 first.
+- `script-core.js` — baseline render/reset/focus.
+- `smart-review.js` — reset wrong guard + review bar.
+- `visual-prompt.js` — chỉ schedule visual deferred.
+- `listen-mode.js` — prompt visibility; chỉ speech nếu Listen active.
+- `memory-mode.js` — countdown chỉ khi Memory active.
+- `topic-level.js` — bar/status dùng cached pools.
+- `vietnamese-input.js` — word progress/guide.
+- `startup-runtime-instrument.js` — measure final pre-script chain.
+- `mode-stats.js` — Hard stats wrapper được nạp sau `script.js`.
 
 ### `setMode`
 
-- `script-core.js`: đổi Easy/Hard/Free và panel.
-- `smart-review.js`: thoát Smart Review khi rời Easy.
-- `listen-mode.js`: tắt Listen/Web Speech khi rời Easy.
-- `tts-local.js`: bọc thêm để dừng MP3 local khi rời Easy.
-- `memory-mode.js`: dọn timer/Memory khi rời Easy.
-- `topic-level.js`: cập nhật UI chủ đề/cấp độ.
-- `vietnamese-input.js`: refresh progress/guide.
+- `script-core.js`
+- `smart-review.js`
+- `visual-prompt.js`
+- `listen-mode.js`
+- `tts-local.js`
+- `memory-mode.js`
+- `topic-level.js`
+- `vietnamese-input.js`
+- `startup-runtime-instrument.js`
+
+Invariant:
+
+- rời Easy → Listen/Memory/visual Easy phải dừng/ẩn;
+- Easy-only tools không xuất hiện ở Hard/Free.
 
 ### `checkNext`
 
-- `script-core.js`: implementation baseline.
-- `smart-review.js`: implementation chính hiện tại cho Easy/Hard; ghi `promptStats` **chỉ Easy**.
-- `memory-mode.js`: chặn/điều khiển riêng khi Memory đang active; ngoài Memory gọi base.
-- `mode-stats.js`: lớp cuối; với Hard chỉ ghi tổng `modeStats.hard`.
+- `smart-review.js` là implementation chính Easy/Hard hiện tại;
+- `memory-mode.js` intercept khi Memory active;
+- `mode-stats.js` ghi Hard stats lớp cuối.
 
 ### `showTypingDiff`
 
-- `script-core.js`: diff Levenshtein baseline.
-- `ux-hotfix.js`: thay renderer, giữ thuật toán alignment nhưng bỏ ô đỏ/SP.
-- `vietnamese-input.js`: gọi renderer hiện tại rồi thêm phản hồi accent-only nếu phù hợp.
+- baseline Levenshtein ở `script-core.js`;
+- renderer gọn ở `ux-hotfix.js`;
+- accent-only hint ở `vietnamese-input.js`.
 
-## Visual — CDN / local / emoji
+## 6. Visual pipeline
 
-`visual-data.js` giữ mapping và CDN pinned `jdecked/twemoji@17.0.3`.
-
-`twemoji-local-manifest.js` nạp **sau `visual-data.js` và trước `visual-prompt.js`**. Manifest mặc định rỗng để repo vẫn hoạt động trước khi vendor SVG.
-
-`visual-prompt.js` dùng thứ tự:
+Twemoji pinned `jdecked/twemoji@17.0.3`.
 
 ```text
-1. assets/twemoji/<code>.svg nếu local manifest có code
-2. CDN pinned Twemoji 17.0.3
-3. emoji fallback của rule
+semantic exact/contains match
+→ local SVG nếu manifest có
+→ CDN pinned
+→ emoji fallback
 ```
 
-Nếu local file đã được khai báo nhưng lỗi/404, runtime chỉ thử CDN **một lần** rồi mới xuống emoji. Prompt không có mapping vẫn không chừa khoảng trống.
+Nếu semantic mapping không chắc → không hiện hình.
 
-Build tool:
+Vendor:
 
 ```text
 tools/vendor_twemoji.py
 tools/vendor_twemoji.bat
 ```
 
-Tool:
+## 7. Profile/storage
 
-- đọc các `code` duy nhất từ `visual-data.js`;
-- không tải toàn bộ Twemoji;
-- lưu `assets/twemoji/<code>.svg`;
-- sinh lại `twemoji-local-manifest.js` từ các file thực sự tồn tại;
-- file có sẵn được skip, `--force` để tải đè;
-- `--dry-run` không cần network.
+Keys:
 
-Debug runtime:
-
-```js
-getGoChuVisualHealth()
+```text
+goChuVer2.profiles.v1
+goChuVer2.activeProfile.v1
+goChuVer2.profile.<id>.v1
 ```
 
-Tài liệu: `OFFLINE_VISUAL.md`.
-
-## Listen / Memory / TTS
-
-### Phase 4 + hotfix baseline
-
-- `listen-mode.js` tạo `speakPrompt`, `setListenMode`, `updateListenModeBar`.
-- `ux-hotfix.js` sửa Web Speech để chỉ dùng voice `vi-*`; không fallback sang giọng ngoại ngữ.
-
-### Phase 10 — local MP3 first
-
-`tts-local.js` nạp **sau `ux-hotfix.js` và trước `memory-mode.js`**.
-
-Nó thay/bọc có chủ đích:
-
-- `speakPrompt` → ưu tiên MP3 trong `tts-manifest.js`; thiếu MP3 mới gọi Web Speech tiếng Việt.
-- `setListenMode` → cho phép bật Listen nếu có MP3 local hoặc Web Speech voice Việt.
-- `updateListenModeBar` → hiển thị nguồn âm.
-- `setMode` → dừng MP3 local khi rời Easy.
-- `applyAudioLevels` → volume/giảm âm thanh áp dụng luôn cho MP3 TTS.
-
-Invariant:
-
-- Listen và Memory không active cùng lúc.
-- Khi rời Easy, cả Web Speech và MP3 local phải dừng.
-- Không phát chồng MP3 + Web Speech.
-- MP3 lỗi file/404 → fallback Web Speech tiếng Việt nếu có.
-- `NotAllowedError` autoplay không được coi là file missing.
-
-Build tool: `tools/render_google_tts.py`.
-Tài liệu: `TTS_RENDERING.md`.
-Debug: `getGoChuTtsHealth()`.
-
-## Profile/storage
-
-- `profile-stats.js` route `promptStats`, topic/level, Memory settings và study time vào profile active.
-- `vietnamese-dashboard.js` mở rộng dashboard với `accentErrors`.
-- `mode-stats.js` mở rộng schema profile bằng `modeStats.hard/free`; không sửa `promptStats`.
-- `storage-health.js` nạp sau `mode-stats.js`, vì serialization phải đi qua final `normalizeProfileData`.
-
-## Hard / Free stats
-
-- Hard: sai nhiều lần cùng prompt chỉ tính tối đa 1 sai; giải đúng tính 1 đúng.
-- Free: sai nhiều lần cùng target chỉ tính tối đa 1 sai; hoàn thành đúng tính 1 đúng.
-- Hard/Free không tham gia Smart Review, topic Auto level hay adaptive Easy.
-
-## Storage health layer
-
-`storage-health.js` dùng compare-before-write cho profile/registry, không đổi key/schema/version/cadence 15 giây.
+- Easy adaptive: `promptStats`.
+- Hard/Free: `modeStats.hard/free` riêng.
+- `storage-health.js` compare-before-write.
+- Study time vẫn flush khoảng 15 giây.
 
 Debug:
 
-- `getGoChuStorageHealth()`;
-- `printGoChuStorageHealth()`;
-- `goChuStorageMetrics`.
+```js
+getGoChuStorageHealth()
+printGoChuStorageHealth()
+goChuStorageMetrics
+```
 
-## Asset reliability layer
+## 8. Stability layer
 
-`asset-reliability.js` chỉ probe các UI asset `../IMG/...` chính và fallback emoji/text nếu lỗi. Twemoji không đi qua module này vì có pipeline riêng local → CDN → emoji.
+Đã cấm:
+
+- auto-fullscreen trên click/keydown/wheel;
+- rebuild 50+ Free options mỗi lần mở;
+- layout-heavy resize/input nhiều lần cùng frame.
+
+`performance-health.js` theo dõi Long Task/runtime error.
 
 Debug:
 
-- `getGoChuAssetHealth()`;
-- `printGoChuAssetHealth()`.
+```js
+getGoChuPerformanceHealth()
+printGoChuPerformanceHealth()
+```
 
-Inventory: `ASSET_INVENTORY.md`.
+## 9. Accessibility
 
-## Accessibility layer
+`accessibility.js` chỉ quản lý:
 
-`accessibility.js` không ghi đè hàm học; chỉ đồng bộ ARIA, focus trap/restore, inert background, aria-live và reduced-motion.
+- ARIA;
+- focus trap/restore;
+- modal inert;
+- Tab/Shift+Tab/Escape;
+- lazy profile modal binding;
+- reduced motion.
 
-## CI / static verification
+Không bọc logic học.
 
-`.github/workflows/verify.yml` chạy trên PR và push `main`:
+## 10. CI/static verification
 
-1. compile Python tools;
-2. `python tools/verify_repository.py`;
-3. `python tools/vendor_twemoji.py --dry-run`;
-4. `python tools/render_google_tts.py --dry-run --limit 5`.
+`.github/workflows/verify.yml` chạy:
 
-`tools/verify_repository.py` không cần browser/network và kiểm tra:
+1. Python compile.
+2. `node --check` toàn bộ JS root.
+3. `tools/verify_repository.py`.
+4. deploy readiness report.
+5. Twemoji dry-run.
+6. Google TTS dry-run.
 
-- mọi `<script src>` local trong `index.html` tồn tại;
-- load order các module quan trọng;
-- Twemoji rule/code và local manifest;
-- local manifest không trỏ tới SVG thiếu;
-- TTS manifest có provider marker và không chứa chuỗi giống Google API key phổ biến;
-- các build/verify tools bắt buộc tồn tại.
+Verifier khóa thêm đợt 11:
 
-CI không gọi Google Cloud API và không tải Twemoji thật.
+- startup marker scripts phải tồn tại đúng load order;
+- topic/word-count/pool cache không được xóa;
+- không quay lại per-prompt effective-level calculation;
+- visual phải deferred/cached;
+- profile dashboard không được eager render;
+- voice enumeration không được eager;
+- asset probing phải idle.
 
-## Khi thêm module mới
+## 11. Khi thêm module mới
 
-Trước khi merge:
+Trước merge:
 
-1. Xác định hàm nào bị bọc/thay.
-2. Đặt module đúng load order.
-3. Không gọi base hai lần trừ implementation replacement đã được tài liệu hóa.
-4. Không tạo vòng `A -> B -> A`.
-5. Chạy `runGoChuSmokeTests()`.
-6. Chạy `python tools/verify_repository.py`.
-7. Test Easy / Hard / Free / Listen / Memory / chuyển profile.
-8. Test visual ở 3 trạng thái: local SVG, CDN fallback, emoji fallback.
-9. Test Listen: MP3 local, Web Speech fallback, thiếu cả hai.
-10. Test keyboard-only ở dashboard/game selector.
-11. Test storage export/import/reset.
-12. Cập nhật tài liệu này và `HANDOFF.md` nếu chuỗi/load order thay đổi.
+1. Audit wrapper/load order.
+2. Không thêm synchronous scan/network/storage vào Easy first paint.
+3. `node --check` PASS.
+4. `python tools/verify_repository.py` PASS.
+5. `runGoChuSmokeTests()` PASS trong browser.
+6. `printGoChuStartupPerformance()` kiểm tra first-input/showText.
+7. Test Easy/Hard/Free/Listen/Memory/profile.
+8. Test visual local/CDN/emoji.
+9. Test dashboard keyboard/accessibility.
+10. Cập nhật `RUNTIME_ARCHITECTURE.md` + `HANDOFF.md`.
