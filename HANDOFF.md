@@ -16,7 +16,7 @@ Mục tiêu học tập chính:
 
 - Giữ nền tảng **HTML + CSS + JavaScript thuần**.
 - Chưa cần backend/database cho các tính năng học cơ bản.
-- Dùng `localStorage`/`IndexedDB` khi bắt đầu lưu tiến độ, lỗi hay gặp và hồ sơ bé.
+- Dùng `localStorage`/`IndexedDB` khi lưu tiến độ, lỗi hay gặp và hồ sơ bé.
 - Không refactor lớn nếu không cần thiết; ưu tiên thay đổi nhỏ, dễ kiểm tra và rollback.
 - Mỗi tính năng lớn phải có **commit riêng**.
 - **Mọi thay đổi, kế hoạch, quyết định và việc còn lại phải cập nhật vào file `HANDOFF.md`.**
@@ -33,16 +33,16 @@ Baseline đã có:
 - Chế độ Nâng cao.
 - Chế độ Tự do.
 - Danh sách cụm từ ngắn phong phú.
-- Chế độ Đơn giản đã random/xáo trộn thay vì chạy tuần tự.
+- Chế độ Đơn giản random/xáo trộn thay vì chạy tuần tự.
 - Âm thanh click, âm thanh trả lời đúng và nhạc nền.
 - Bộ đếm thời gian học.
 - Một số cài đặt âm lượng/chế độ hiển thị hiện có.
 
 Ghi chú repo:
 
-- File đóng gói `files.zip` của bản upload không đưa vào repo vì chỉ là bản sao của `index.html`, `styles.css`, `script.js`.
-- Bản local có đủ 4 file âm thanh. Trong lần khởi tạo remote qua GitHub App, binary audio chưa được đưa vào commit code do giới hạn truyền file binary của connector; đường dẫn trong code vẫn được giữ nguyên để bổ sung asset sau mà không đổi logic.
-- `index.html` đã bỏ các bản sao CSS/JS bị nhúng ở `media="not all"` và `type="text/plain"` vì chúng không chạy; CSS và dữ liệu JS được tách thành file nhỏ hơn để dễ bảo trì.
+- File đóng gói `files.zip` của bản upload không đưa vào repo vì chỉ là bản sao của các file nguồn.
+- Bản local có đủ 4 file âm thanh. Trong lần khởi tạo remote qua GitHub App, binary audio chưa được đưa vào commit code do giới hạn truyền file binary của connector; đường dẫn trong code vẫn được giữ nguyên.
+- `index.html` đã bỏ các bản sao CSS/JS bị nhúng nhưng không chạy; CSS và dữ liệu JS được tách thành file nhỏ hơn để dễ bảo trì.
 - Trang hiện vẫn tham chiếu icon/hình ở `../IMG/...`; đây là dependency ngoài thư mục project mà bản nguồn ban đầu cũng đang dùng.
 
 ## 4. Roadmap phát triển
@@ -58,15 +58,16 @@ Ghi chú repo:
 - [x] Hiển thị responsive trên mobile.
 
 ### Phase 2 — Random thông minh + ôn lỗi
-- [ ] Ghi lại từ/câu bé thường gõ sai.
-- [ ] Tăng xác suất xuất hiện lại nội dung hay sai.
-- [ ] Có mục “Ôn lại từ hay sai”.
-- [ ] Tránh lặp lại cùng một câu ngay liên tiếp.
+- [x] Ghi lại từ/câu bé thường gõ sai.
+- [x] Tăng xác suất xuất hiện lại nội dung hay sai.
+- [x] Có mục “Ôn lại từ hay sai”.
+- [x] Tránh lặp lại cùng một câu ngay liên tiếp.
 
 ### Phase 3 — Ảnh + chữ
 - [ ] Hỗ trợ dữ liệu có ảnh minh họa cho từ/câu.
 - [ ] Ví dụ: ảnh con bò → `con bò` / `con bò ăn cỏ`.
 - [ ] Có fallback khi chưa có ảnh.
+- [ ] Không bắt buộc tất cả prompt phải có ảnh ngay từ đầu.
 
 ### Phase 4 — Nghe rồi gõ
 - [ ] Dùng Web Speech API đọc tiếng Việt.
@@ -109,13 +110,11 @@ Ghi chú repo:
 
 ## 5. Thứ tự ưu tiên hiện tại
 
-Ưu tiên triển khai:
-
-1. **Chỉ rõ ký tự gõ sai**.
-2. **Random thông minh + lưu từ hay sai**.
-3. **Ảnh + chữ**.
-4. **Nghe rồi gõ**.
-5. **Đọc → nhớ → gõ**.
+1. ~~Chỉ rõ ký tự gõ sai~~ ✅
+2. ~~Random thông minh + lưu từ hay sai~~ ✅
+3. **Ảnh + chữ** ← bước tiếp theo
+4. **Nghe rồi gõ**
+5. **Đọc → nhớ → gõ**
 
 Không triển khai nhiều feature cùng lúc. Hoàn tất, kiểm tra và ghi handoff từng feature trước khi sang feature kế tiếp.
 
@@ -125,13 +124,11 @@ Không triển khai nhiều feature cùng lúc. Hoàn tất, kiểm tra và ghi 
 
 - Người dùng tạo repo GitHub `maxskill115/go-chu-ver2`.
 - Đã xác nhận ChatGPT GitHub App nhìn thấy repo và có quyền truy cập.
-- Lần ghi đầu tiên bị GitHub trả `403 Resource not accessible by integration` vì quyền GitHub App chưa được cập nhật.
-- Người dùng đã cấp lại quyền; kiểm tra ghi file thành công.
-- Quy ước mới theo yêu cầu người dùng: **mọi công việc và cả plan phát triển phải cập nhật vào HANDOFF**.
-- Baseline code đã được đưa lên `main`: `index.html`, dữ liệu Đơn giản/Nâng cao/Tự do, logic JS và CSS responsive.
+- Lần ghi đầu tiên bị GitHub trả `403 Resource not accessible by integration`; người dùng cấp lại quyền và ghi file thành công.
+- Quy ước bắt buộc: **mọi công việc và cả plan phát triển phải cập nhật vào HANDOFF**.
+- Baseline code đã được đưa lên `main`.
 - Đã kiểm tra cú pháp các file JavaScript sau khi tách bằng `node --check`: đạt.
 - Audio binary vẫn là việc tồn đọng đã ghi ở phần Ghi chú repo.
-- Phase 1 đã hoàn tất: **chỉ rõ ký tự gõ sai/thừa/thiếu**.
 
 ### 2026-08-14 — Phase 1: Chỉ rõ ký tự gõ sai
 
@@ -140,15 +137,44 @@ Không triển khai nhiều feature cùng lúc. Hoàn tất, kiểm tra và ghi 
 - Ký tự thiếu hiển thị bằng ô `□`; khoảng trắng sai hiển thị ký hiệu `␠`.
 - Dùng căn chỉnh Levenshtein để một ký tự thiếu/thừa ở giữa không làm toàn bộ phần phía sau bị đánh dấu sai.
 - Tôn trọng cài đặt phân biệt hoa/thường hiện có.
-- CSS có layout riêng cho desktop và tự chuyển thành một cột trên màn hình nhỏ.
-- Đã chạy `node --check` cho `script-core.js` và `script.js`: đạt.
-- Phạm vi thay đổi: `script-core.js`, `styles-2.css`, `HANDOFF.md`.
+- CSS có layout riêng cho desktop và mobile.
+- Phase 1 đã squash merge vào `main` qua PR #1, commit `1e8450b`.
 
-## 7. Việc tiếp theo
+### 2026-08-14 — Phase 2: Random thông minh + ôn lỗi
 
-1. Bắt đầu **Phase 2 — Random thông minh + ôn lỗi**.
-2. Thiết kế cấu trúc lưu số lần đúng/sai theo từng prompt bằng `localStorage`.
-3. Ưu tiên đưa lại prompt hay sai nhưng không lặp ngay liên tiếp.
-4. Tạo mục/luồng “Ôn lại từ hay sai” sau khi đã có dữ liệu lỗi ổn định.
-5. Mọi thay đổi của Phase 2 tiếp tục cập nhật vào `HANDOFF.md` trong cùng đợt code.
-6. Audio binary remote vẫn là việc tồn đọng riêng, không chặn phát triển tính năng học.
+- Tạo module riêng `smart-review.js` để không trộn logic học thích nghi vào `script-core.js`.
+- Dùng key `goChuVer2.promptStats.v1` trong `localStorage` để lưu thống kê theo từng prompt.
+- Mỗi prompt lưu `correct`, `wrong`, `lastCorrectAt`, `lastWrongAt`.
+- Một prompt bị bé thử sai nhiều lần trong cùng một lượt chỉ tính **1 lần sai**, tránh làm điểm yếu tăng quá nhanh.
+- Điểm cần ôn hiện dùng công thức `wrong * 2 - correct`; khi bé gõ đúng đủ số lần, prompt tự ra khỏi nhóm yếu.
+- Random thông minh vẫn giữ toàn bộ danh sách ngẫu nhiên, nhưng chèn thêm tối đa 24 prompt yếu vào vòng học để chúng xuất hiện thường xuyên hơn.
+- Prompt được chèn thêm có khoảng cách an toàn với bản gốc; đồng thời tránh để prompt đầu vòng mới trùng prompt vừa học.
+- Thêm thanh **Ôn lại** trong chế độ Đơn giản. Khi có dữ liệu lỗi, nút hiển thị số prompt cần ôn; mỗi lượt ôn tối đa 20 prompt yếu nhất.
+- Khi hoàn thành lượt ôn, web tự quay về vòng học thường và báo `🌟 Ôn tập xong!`.
+- Dữ liệu lỗi nằm hoàn toàn trên trình duyệt hiện tại, không cần backend.
+- `localStorage` có `try/catch`; nếu trình duyệt chặn lưu, web vẫn hoạt động như chế độ random thường.
+- Thêm `smart-review.css` với layout responsive; mobile chuyển thanh ôn thành dạng dọc, nút rộng 100%.
+- `index.html` nạp module theo thứ tự: `script-core.js` → `smart-review.js` → `script.js` để module có thể mở rộng hàm hiện tại trước bước khởi tạo cuối.
+- Đã chạy `node --check smart-review.js`: đạt.
+- Phạm vi Phase 2: `smart-review.js`, `smart-review.css`, `styles.css`, `index.html`, `HANDOFF.md`.
+- Trong lúc tạo branch qua connector đã phát sinh hai branch thử chưa dùng: `agent/phase2-smart-review` và `agent/phase2-smart-review-2`; branch triển khai thực tế là `agent/phase2-smart-review-final`.
+
+## 7. Kế hoạch Phase 3 — Ảnh + chữ
+
+Mục tiêu: giúp bé gắn chữ với hình ảnh/ý nghĩa thay vì chỉ nhìn chuỗi ký tự.
+
+Kế hoạch triển khai:
+
+1. Thiết kế mapping ảnh theo prompt mà không phải sửa toàn bộ `easyWords` ngay lập tức.
+2. Ưu tiên một nhóm thử nghiệm nhỏ: động vật, trái cây, đồ vật quen thuộc.
+3. Khi prompt có ảnh, hiển thị ảnh phía trên chữ; prompt chưa có ảnh vẫn hiển thị như hiện tại.
+4. Ảnh phải responsive và không làm bàn phím/input bị đẩy khỏi màn hình mobile.
+5. Tách mapping ảnh thành file data riêng để sau này thêm ảnh chỉ cần bổ sung dữ liệu.
+6. Giữ random thông minh/ôn lỗi hoạt động bình thường với cả prompt có ảnh và không có ảnh.
+7. Cập nhật `HANDOFF.md` trong cùng PR của Phase 3.
+
+## 8. Việc còn tồn đọng
+
+- Bổ sung lại các file audio binary vào remote khi có luồng upload binary phù hợp.
+- Dependency `../IMG/...` của giao diện gốc chưa được gom vào repo `go-chu-ver2`.
+- Hai branch thử của Phase 2 có thể xóa thủ công sau nếu muốn giữ danh sách branch gọn; chúng không chứa thay đổi dùng cho `main`.
