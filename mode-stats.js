@@ -26,7 +26,6 @@ function normalizeModeStats(source){
     return output;
 }
 
-/* Mở rộng schema profile mà không sửa trực tiếp Phase 7. */
 const baseNormalizeProfileDataForModeStats = normalizeProfileData;
 normalizeProfileData = function(data){
     const normalized = baseNormalizeProfileDataForModeStats(data);
@@ -172,14 +171,13 @@ submitFreeAnswer = function(){
 
 /*
  * Phase 9 đợt 11:
- * Phase 7 normalize chạy trước module này và không biết field modeStats.
- * Vì vậy sau khi đổi profile phải hydrate modeStats từ raw storage thay vì mặc định rỗng.
- * Không ghi profile ngược lại ngay lúc startup.
+ * hydrate modeStats TRƯỚC base apply để dashboard (nếu đang mở) render đúng profile mới.
  */
 const baseApplyProfileToRuntimeForModeStats = applyProfileToRuntime;
 applyProfileToRuntime = function(rebuild = true, refreshUi = true){
-    const resultValue = baseApplyProfileToRuntimeForModeStats(rebuild, refreshUi);
     hydrateActiveModeStatsFromStorage();
+    const resultValue = baseApplyProfileToRuntimeForModeStats(rebuild, refreshUi);
+    ensureActiveModeStats();
     resetHardModeAttemptGuard();
     resetFreeModeAttemptGuard();
     return resultValue;
