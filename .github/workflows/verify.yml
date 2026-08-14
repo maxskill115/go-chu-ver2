@@ -27,6 +27,10 @@ jobs:
           python -m py_compile tools/verify_repository.py
           python -m py_compile tools/check_deploy_ready.py
 
+      - name: Check JavaScript syntax
+        run: |
+          find . -maxdepth 1 -name '*.js' -print0 | xargs -0 -n1 node --check
+
       - name: Static repository verification
         run: python tools/verify_repository.py
 
