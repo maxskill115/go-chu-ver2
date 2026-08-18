@@ -30,6 +30,7 @@ jobs:
           python -m py_compile tools/verify_easy_entry.py
           python -m py_compile tools/verify_easy_transition.py
           python -m py_compile tools/verify_optional_runtime.py
+          python -m py_compile tools/verify_profile_split.py
 
       - name: Check JavaScript syntax
         run: |
@@ -49,6 +50,9 @@ jobs:
 
       - name: Optional runtime split verification
         run: python tools/verify_optional_runtime.py
+
+      - name: Profile runtime/dashboard split verification
+        run: python tools/verify_profile_split.py
 
       - name: Deploy readiness report
         run: python tools/check_deploy_ready.py

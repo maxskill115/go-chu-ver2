@@ -36,12 +36,12 @@ def main() -> int:
         fail("index.html quay lại styles.css/@import waterfall")
 
     css_links = re.findall(r'<link\s+rel="stylesheet"\s+href="([^"]+)"', html)
-    if not (5 <= len(css_links) <= 7):
-        fail(f"Critical CSS count bất thường: {len(css_links)} (kỳ vọng 5-7)")
+    if not (4 <= len(css_links) <= 6):
+        fail(f"Critical CSS count bất thường: {len(css_links)} (kỳ vọng 4-6)")
 
     post_styles = [
         "listen-mode.css", "ux-hotfix.css", "memory-mode.css", "visual-prompt.css",
-        "vietnamese-input.css", "accessibility.css", "asset-reliability.css",
+        "profile-stats.css", "vietnamese-input.css", "accessibility.css", "asset-reliability.css",
     ]
     leaked_styles = [name for name in post_styles if name in css_links]
     if leaked_styles:
@@ -65,19 +65,10 @@ def main() -> int:
             fail(f"Critical script chưa defer: {src}")
 
     critical_order = [
-        "data-easy.js",
-        "topic-data.js",
-        "memory-state.js",
-        "audio-lazy-bootstrap.js",
-        "script-core.js",
-        "easy-boot-state.js",
-        "smart-review.js",
-        "topic-level.js",
-        "profile-stats.js",
-        "startup-runtime-instrument.js",
-        "easy-entry-transition.js",
-        "easy-start.js",
-        "post-startup-loader.js",
+        "data-easy.js", "topic-data.js", "memory-state.js", "audio-lazy-bootstrap.js",
+        "script-core.js", "easy-boot-state.js", "smart-review.js", "topic-level.js",
+        "profile-stats.js", "startup-runtime-instrument.js", "easy-entry-transition.js",
+        "easy-start.js", "post-startup-loader.js",
     ]
     positions = {name: refs.index(name) if name in refs else -1 for name in critical_order}
     missing = [name for name, pos in positions.items() if pos < 0]
@@ -89,6 +80,8 @@ def main() -> int:
 
     if "script.js" in refs:
         fail("script.js Free/Settings không được quay lại critical path sau 11G")
+    if "profile-dashboard.js" in refs:
+        fail("profile-dashboard.js không được quay lại critical path sau 11H")
     if 'startStudyTimer();' not in easy_start or 'setMode("easy");' not in easy_start:
         fail("easy-start.js thiếu startup Easy chính thức")
 
@@ -96,8 +89,8 @@ def main() -> int:
         "script.js", "data-poems.js", "tts-manifest.js", "visual-data.js",
         "twemoji-local-manifest.js", "visual-prompt.js", "listen-mode.js",
         "ux-hotfix.js", "tts-local.js", "memory-mode.js", "memory-topic-bridge.js",
-        "vietnamese-input.js", "vietnamese-dashboard.js", "stability-fixes.js",
-        "mode-stats.js", "storage-health.js", "asset-reliability.js",
+        "profile-dashboard.js", "vietnamese-input.js", "vietnamese-dashboard.js",
+        "stability-fixes.js", "mode-stats.js", "storage-health.js", "asset-reliability.js",
         "accessibility.js", "performance-health.js", "debug-smoke.js",
     ]
     leaked_scripts = [name for name in post_scripts if name in refs]
@@ -112,16 +105,9 @@ def main() -> int:
     ok(f"Critical JS: {len(refs)} tag; {len(post_scripts)} module post-startup")
 
     post_order = [
-        "script.js",
-        "tts-manifest.js",
-        "listen-mode.js",
-        "ux-hotfix.js",
-        "tts-local.js",
-        "memory-mode.js",
-        "memory-topic-bridge.js",
-        "vietnamese-input.js",
-        "stability-fixes.js",
-        "mode-stats.js",
+        "script.js", "tts-manifest.js", "listen-mode.js", "ux-hotfix.js", "tts-local.js",
+        "memory-mode.js", "memory-topic-bridge.js", "profile-dashboard.js",
+        "vietnamese-input.js", "vietnamese-dashboard.js", "stability-fixes.js", "mode-stats.js",
     ]
     post_positions = {name: post_loader.find(f'"{name}"') for name in post_order}
     if any(pos < 0 for pos in post_positions.values()):
@@ -140,9 +126,10 @@ def main() -> int:
         fail("Hard/Free/Settings phải bị khóa trong post warm-up")
     if 'GO_CHU_EXECUTING_POST_SCRIPT = "script.js"' not in post_loader:
         fail("Post loader thiếu marker thực thi script.js cho legacy Easy suppression")
-    if "legacyEasySuppressed" not in post_loader:
-        fail("Post runtime validation thiếu legacy Easy suppression check")
-    ok("Post-startup loader có Easy bootstrap split + runtime dependency guard")
+    for marker in ["legacyEasySuppressed", "profileUi:", "profileRuntimeReady", "profileDashboardReady"]:
+        if marker not in post_loader:
+            fail(f"Post runtime validation/health thiếu {marker}")
+    ok("Post-startup loader có bootstrap/profile dependency guard")
 
     required_audio = [
         'audio.preload = "none"', "userActivated", "audio.play = function()",

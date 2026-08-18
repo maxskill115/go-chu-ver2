@@ -1,6 +1,6 @@
 # Performance QA — Easy startup
 
-Áp dụng sau Phase 9.11–11G và trước responsive UI redesign.
+Áp dụng sau Phase 9.11–11H và trước responsive UI redesign.
 
 ## 1. Cold load
 
@@ -21,6 +21,7 @@ getGoChuBootState()
 getGoChuEasyEntryTransitionHealth()
 getGoChuPostStartupHealth()
 getGoChuMemoryStateHealth()
+getGoChuProfileRuntimeHealth()
 ```
 
 Mục tiêu:
@@ -35,21 +36,20 @@ postStartup:start sau first Easy paint
 
 Mobile không tự bật keyboard khi vừa vào Easy.
 
-## 2. Critical path 11F/11G
+## 2. Critical path 11H
 
 Cold-load Network phải cho thấy khoảng:
 
 ```text
 14 critical script tag
-6 blocking CSS
+5 blocking CSS
 ```
-
-**11G không nhất thiết giảm thêm request count.** Mục tiêu là giảm **critical parse/execute volume**: `script.js` lớn không còn trong HTML critical path.
 
 Critical phải có:
 
 ```text
 memory-state.js
+profile-stats.js   # runtime/data only
 easy-start.js
 ```
 
@@ -57,6 +57,8 @@ Không được có:
 
 ```text
 script.js
+profile-dashboard.js
+profile-stats.css
 tts-manifest.js
 listen-mode.js
 ux-hotfix.js
@@ -67,44 +69,70 @@ Vietnamese UI/dashboard
 mode-stats/storage/asset/a11y/debug
 ```
 
-`easy-start.js` chỉ chịu trách nhiệm startup Easy và one-time legacy suppression; Free/Settings code không được quay lại file này.
+11G giảm critical code volume bằng `easy-start.js`; 11H giảm tiếp bằng cách bỏ profile dashboard/backup code và CSS khỏi first Easy parse/paint.
 
-## 3. Easy bootstrap split 11G
-
-Ngay sau first Easy frame:
+## 3. Easy bootstrap 11G
 
 ```js
 getGoChuEasyBootstrapHealth()
 ```
 
-Kỳ vọng:
+Ngay first frame:
 
 ```text
 coreStarted = true
 currentMode = easy
 ```
 
-Sau post-startup ready:
+Sau post ready:
 
 ```text
 legacyScriptEasySuppressed = true
 ```
 
-Ý nghĩa: `script.js` được post-load và hai dòng legacy cuối file không được phép re-run Easy transition lần hai.
+Trong warm-up Easy dùng được; Hard + Free + Settings tạm disabled/`aria-busy=true`.
 
-Trong warm-up:
+## 4. Profile runtime/dashboard split 11H
 
-- Easy vẫn dùng được;
-- Hard + Free + Settings tạm disabled/`aria-busy=true`;
-- click Easy của user **không được** bị suppression guard chặn; guard chỉ chặn khi `GO_CHU_EXECUTING_POST_SCRIPT === "script.js"`.
+Ngay first Easy frame:
 
-Startup report nên có:
-
-```text
-easy:bootstrap
+```js
+getGoChuProfileRuntimeHealth()
 ```
 
-## 4. Post-startup 11E–11G
+Kỳ vọng:
+
+```text
+ready = true
+profileCount >= 1
+activeProfileId != ""
+dashboardReady = false
+```
+
+Đồng thời:
+
+```js
+Boolean(document.getElementById("profileDashboardBtn"))
+Boolean(document.getElementById("profileDashboardOverlay"))
+```
+
+Kỳ vọng trước post-ready:
+
+```text
+false
+false
+```
+
+Sau post-ready:
+
+```text
+getGoChuProfileRuntimeHealth().dashboardReady = true
+Boolean(document.getElementById("profileDashboardBtn")) = true
+```
+
+`profile-stats.css` phải được post-load cùng dashboard, không block first Easy paint.
+
+## 5. Post-startup 11E–11H
 
 ```js
 getGoChuPostStartupHealth()
@@ -116,17 +144,19 @@ Sau khi hoàn tất kỳ vọng:
 ready = true
 runtimeValidated = true
 failedScripts = []
-loadedScripts = 20
-loadedStyles = 7
+loadedScripts = 21
+loadedStyles = 8
 pendingScripts = 0
 pendingStyles = 0
 appUiLoaded = true
 legacyScriptEasySuppressed = true
 memoryBehaviorReady = true
 memoryTopicBridgeReady = true
+profileRuntimeReady = true
+profileDashboardReady = true
 ```
 
-`runtimeChecks` phải đều true, gồm:
+`runtimeChecks` phải đều true:
 
 ```text
 appUi
@@ -136,6 +166,7 @@ listen
 tts
 memory
 memoryTopic
+profileUi
 vietnameseInput
 modeStats
 storage
@@ -146,9 +177,33 @@ Sau ready:
 
 - Settings mở/đóng bình thường;
 - Free có event handlers và bài thơ;
-- Hard/Free tự mở.
+- Hard/Free tự mở;
+- nút 👤 xuất hiện và dashboard hoạt động.
 
-## 5. Memory state/behavior regression
+## 6. Profile regression bắt buộc
+
+Sau post-ready kiểm tra:
+
+1. Mở 👤.
+2. Đổi profile.
+3. Thêm profile.
+4. Đổi tên.
+5. Xóa profile khi có >1 profile.
+6. Reset tiến độ profile hiện tại.
+7. Export backup JSON.
+8. Import backup JSON.
+9. Reload trang.
+
+Kỳ vọng:
+
+- active profile đúng;
+- Topic/Level/Memory preference theo profile đúng;
+- Easy promptStats không lẫn profile;
+- Hard/Free modeStats còn nguyên sau reload;
+- study timer vẫn tăng và flush khoảng 15 giây;
+- dashboard vẫn nhận extension `vietnamese-dashboard.js` và `mode-stats.js`.
+
+## 7. Memory state/behavior regression
 
 Trước post ready:
 
@@ -168,7 +223,7 @@ Sau post ready: `behaviorReady = true`.
 
 Bật Memory phải giữ topic filter, weak prompt, profile preference và Listen/Memory mutual exclusion.
 
-## 6. Boot/transition regression
+## 8. Boot/transition regression
 
 ```js
 getGoChuBootState()
@@ -186,7 +241,7 @@ pending jobs về false sau vài frame
 
 Mobile: `mobileAutofocusSkipped` tăng. Desktop: `desktopAutofocusDeferred` tăng.
 
-## 7. Cache/prompt loop
+## 9. Cache/prompt loop
 
 Sau post ready:
 
@@ -199,7 +254,7 @@ getGoChuVisualHealth()
 
 Luyện 20–30 prompt Easy. Không long task lặp, Smart Review/Auto level đúng, `lastEasySourcePoolSize` phải là pool topic/level thực tế.
 
-## 8. Mode/Settings regression
+## 10. Mode/Settings regression
 
 Sau `GO_CHU_POST_STARTUP_READY === true`, thử 10 vòng:
 
@@ -218,19 +273,7 @@ Kiểm tra:
 - Listen/TTS/Memory không lộ Hard/Free;
 - không duplicate event handler hoặc duplicate Easy rebuild.
 
-## 9. Profile/dashboard
-
-Ngay startup:
-
-```js
-Boolean(document.getElementById("profileDashboardOverlay"))
-```
-
-Kỳ vọng `false`.
-
-Sau post ready mở 👤: dashboard đầy đủ Vietnamese/mode stats, Tab/Escape/focus trap đúng.
-
-## 10. Browser/device matrix
+## 11. Browser/device matrix
 
 ```text
 Chrome 1366×768
@@ -248,6 +291,7 @@ getGoChuBootState()
 getGoChuEasyEntryTransitionHealth()
 getGoChuPostStartupHealth()
 getGoChuMemoryStateHealth()
+getGoChuProfileRuntimeHealth()
 getGoChuLearningPoolHealth()
 getGoChuSmartReviewHealth()
 ```
