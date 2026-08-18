@@ -35,10 +35,13 @@ def main() -> int:
         fail("index.html quay lại styles.css/@import waterfall")
 
     css_links = re.findall(r'<link\s+rel="stylesheet"\s+href="([^"]+)"', html)
-    if not (7 <= len(css_links) <= 10):
-        fail(f"Critical CSS count bất thường: {len(css_links)} (kỳ vọng 7-10)")
+    if not (5 <= len(css_links) <= 7):
+        fail(f"Critical CSS count bất thường: {len(css_links)} (kỳ vọng 5-7)")
 
     post_styles = [
+        "listen-mode.css",
+        "ux-hotfix.css",
+        "memory-mode.css",
         "visual-prompt.css",
         "vietnamese-input.css",
         "accessibility.css",
@@ -50,7 +53,7 @@ def main() -> int:
     for name in post_styles:
         if name not in post_loader:
             fail(f"Post loader thiếu optional stylesheet: {name}")
-    ok(f"Critical CSS: {len(css_links)} file; {len(post_styles)} file chuyển post-startup")
+    ok(f"Critical CSS: {len(css_links)} file; {len(post_styles)} file post-startup")
 
     script_tags = re.findall(r'<script([^>]*)\ssrc="([^"]+)"([^>]*)></script>', html)
     if not script_tags:
@@ -67,16 +70,12 @@ def main() -> int:
 
     critical_order = [
         "data-easy.js",
-        "tts-manifest.js",
         "topic-data.js",
+        "memory-state.js",
         "audio-lazy-bootstrap.js",
         "script-core.js",
         "easy-boot-state.js",
         "smart-review.js",
-        "listen-mode.js",
-        "ux-hotfix.js",
-        "tts-local.js",
-        "memory-mode.js",
         "topic-level.js",
         "profile-stats.js",
         "startup-runtime-instrument.js",
@@ -94,9 +93,15 @@ def main() -> int:
 
     post_scripts = [
         "data-poems.js",
+        "tts-manifest.js",
         "visual-data.js",
         "twemoji-local-manifest.js",
         "visual-prompt.js",
+        "listen-mode.js",
+        "ux-hotfix.js",
+        "tts-local.js",
+        "memory-mode.js",
+        "memory-topic-bridge.js",
         "vietnamese-input.js",
         "vietnamese-dashboard.js",
         "stability-fixes.js",
@@ -114,9 +119,25 @@ def main() -> int:
         if name not in post_loader:
             fail(f"Post loader thiếu script: {name}")
 
-    if len(refs) > 20:
+    if len(refs) > 16:
         fail(f"Critical script count tăng trở lại: {len(refs)}")
-    ok(f"Critical JS: {len(refs)} tag; {len(post_scripts)} module chuyển post-startup")
+    ok(f"Critical JS: {len(refs)} tag; {len(post_scripts)} module post-startup")
+
+    post_order = [
+        "tts-manifest.js",
+        "listen-mode.js",
+        "ux-hotfix.js",
+        "tts-local.js",
+        "memory-mode.js",
+        "memory-topic-bridge.js",
+        "vietnamese-input.js",
+    ]
+    post_positions = {name: post_loader.find(f'"{name}"') for name in post_order}
+    if any(pos < 0 for pos in post_positions.values()):
+        fail("Thiếu dependency trong post runtime order")
+    for current, nxt in zip(post_order, post_order[1:]):
+        if post_positions[current] >= post_positions[nxt]:
+            fail(f"Sai post runtime order: {current} phải trước {nxt}")
 
     if post_loader.count("requestAnimationFrame") < 2:
         fail("Post loader thiếu double requestAnimationFrame sau first paint")
@@ -126,7 +147,7 @@ def main() -> int:
         fail("Post loader thiếu readiness/health API")
     if "setSecondaryModesPending(true)" not in post_loader:
         fail("Hard/Free phải bị khóa trong lúc post modules chưa sẵn sàng")
-    ok("Post-startup loader có paint gate + ordered scripts + readiness guard")
+    ok("Post-startup loader có paint gate + runtime dependency order")
 
     required_audio = [
         'audio.preload = "none"',
