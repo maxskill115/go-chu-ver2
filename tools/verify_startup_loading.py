@@ -31,7 +31,6 @@ def main() -> int:
     lazy_audio = read("audio-lazy-bootstrap.js")
     post_loader = read("post-startup-loader.js")
 
-    # CSS critical path: không quay lại @import hoặc đưa optional CSS vào first paint.
     if 'href="styles.css"' in html:
         fail("index.html quay lại styles.css/@import waterfall")
 
@@ -53,7 +52,6 @@ def main() -> int:
             fail(f"Post loader thiếu optional stylesheet: {name}")
     ok(f"Critical CSS: {len(css_links)} file; {len(post_styles)} file chuyển post-startup")
 
-    # JS: startup-performance sync để đo sớm; mọi critical source còn lại defer.
     script_tags = re.findall(r'<script([^>]*)\ssrc="([^"]+)"([^>]*)></script>', html)
     if not script_tags:
         fail("Không tìm thấy external script tags")
@@ -120,18 +118,16 @@ def main() -> int:
         fail(f"Critical script count tăng trở lại: {len(refs)}")
     ok(f"Critical JS: {len(refs)} tag; {len(post_scripts)} module chuyển post-startup")
 
-    # Post loader phải cho ít nhất một paint trước khi bắt đầu tải feature phụ.
     if post_loader.count("requestAnimationFrame") < 2:
         fail("Post loader thiếu double requestAnimationFrame sau first paint")
     if "script.async = false" not in post_loader:
         fail("Dynamic post scripts phải giữ execution order bằng async=false")
     if "GO_CHU_POST_STARTUP_READY" not in post_loader or "getGoChuPostStartupHealth" not in post_loader:
         fail("Post loader thiếu readiness/health API")
-    if "setFreeModePending(true)" not in post_loader:
-        fail("Free mode phải bị khóa trong lúc data-poems/post modules chưa sẵn sàng")
+    if "setSecondaryModesPending(true)" not in post_loader:
+        fail("Hard/Free phải bị khóa trong lúc post modules chưa sẵn sàng")
     ok("Post-startup loader có paint gate + ordered scripts + readiness guard")
 
-    # Audio must not get src until play() after user activation.
     required_audio = [
         'audio.preload = "none"',
         "userActivated",
