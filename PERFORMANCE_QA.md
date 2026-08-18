@@ -1,8 +1,8 @@
 # Performance QA — Easy startup
 
-Dùng sau Phase 9 đợt 11/11B/11C/11D/11E và trước khi bắt đầu responsive UI redesign.
+Áp dụng sau Phase 9.11–11F và trước responsive UI redesign.
 
-## 1. Mở đúng môi trường
+## 1. Cold load
 
 Local:
 
@@ -10,111 +10,147 @@ Local:
 tools\serve_local.bat
 ```
 
-Mở:
+DevTools → Network → Disable cache → reload.
 
-```text
-http://127.0.0.1:8000/
-```
-
-Vercel: dùng URL deploy hiện tại sau khi deploy commit mới.
-
-## 2. Cold load Easy
-
-1. Mở DevTools → Network → Disable cache.
-2. Reload trang.
-3. Không bấm Listen/Memory/Profile trong lần đo đầu.
-4. Khi prompt + input usable, Console:
+Ngay khi prompt/input usable:
 
 ```js
 printGoChuStartupPerformance()
+getGoChuBootState()
 getGoChuEasyEntryTransitionHealth()
 getGoChuPostStartupHealth()
+getGoChuMemoryStateHealth()
 ```
-
-`printGoChuPerformanceHealth()` chỉ xuất hiện sau khi post-startup modules đã nạp xong.
 
 Mục tiêu:
 
 ```text
 Desktop first input ready < 150 ms
 Mobile tầm trung < 300 ms
-showText:easy không tạo Long Task > 50 ms
-easy:entrySyncGate càng gần 0–20 ms càng tốt
-easy:auxUiFlush không tạo Long Task > 50 ms
-postStartup:start phải sau easy:firstInputReady/first paint gate
+showText:easy không Long Task > 50 ms
+easy:entrySyncGate ~0–20 ms nếu có thể
+postStartup:start sau first Easy paint
 ```
 
-`easy:firstInputReady` phải xuất hiện trước asset probe/visual/post-startup network không thiết yếu.
+Mobile không tự bật keyboard khi vừa vào Easy.
 
-## 3. Phase 9 đợt 11D — transition gate
+## 2. Critical path 11F
 
-`getGoChuEasyEntryTransitionHealth()`:
+Cold-load Network phải cho thấy khoảng:
 
-- `easyEntries >= 1`;
-- `transitionActive === false` sau khi vào mode;
-- `deferredCalls > 0`;
-- `auxFlushes >= 1`;
-- `pending` về false sau vài frame;
-- mobile/touch: `mobileAutofocusSkipped` tăng;
-- desktop: `desktopAutofocusDeferred` tăng.
+```text
+14 critical script tag
+6 blocking CSS
+```
 
-Mobile không tự bật bàn phím ngay khi vừa vào Easy; bé chạm ô gõ thì bàn phím mới mở.
+Không được có trong critical HTML:
 
-## 4. Phase 9 đợt 11E — critical/post-startup split
+```text
+tts-manifest.js
+listen-mode.js
+ux-hotfix.js
+tts-local.js
+memory-mode.js
+visual/Twemoji
+Vietnamese UI/dashboard
+mode-stats/storage/asset/a11y/debug
+```
 
-Ngay sau first Easy frame:
+Critical phải có:
+
+```text
+memory-state.js
+```
+
+để Topic/Profile đọc Memory preferences mà không tải behavior Memory.
+
+## 3. Post-startup 11E/11F
 
 ```js
 getGoChuPostStartupHealth()
 ```
 
-Kỳ vọng trong giai đoạn đầu có thể thấy:
-
-```text
-ready = false
-loading = false/true
-```
-
-Sau vài trăm ms tùy mạng:
+Sau khi hoàn tất kỳ vọng:
 
 ```text
 ready = true
+runtimeValidated = true
 failedScripts = []
-failedStyles = []
-loadedScripts = 13
-loadedStyles = 4
+loadedScripts = 19
+loadedStyles = 7
 pendingScripts = 0
 pendingStyles = 0
+memoryBehaviorReady = true
+memoryTopicBridgeReady = true
 ```
 
-Network cold-load phải cho thấy:
+`runtimeChecks` phải đều `true`, đặc biệt:
 
-- critical HTML chỉ có khoảng 18 script tag thay vì ~30;
-- chỉ 9 CSS blocking first render;
-- `data-poems.js`, visual/Twemoji, Vietnamese UI/dashboard, mode stats, storage, asset, accessibility, performance/debug **bắt đầu sau first paint**;
-- Free button tạm disabled/`aria-busy=true` cho tới post-startup ready;
-- sau ready, Free hoạt động bình thường.
+```text
+freeData
+listen
+tts
+memory
+memoryTopic
+vietnameseInput
+modeStats
+storage
+performance
+```
 
-Visual prompt đầu tiên có thể xuất hiện sau prompt/input một nhịp; đây là chủ đích để không block first usable frame.
+Trong warm-up, Hard + Free phải disabled/`aria-busy=true`; Easy vẫn usable. Sau ready, Hard/Free tự mở.
 
-## 5. Boot state regression
+## 4. Memory state/behavior regression
+
+Trước post ready:
+
+```js
+getGoChuMemoryStateHealth()
+```
+
+Kỳ vọng:
+
+```text
+behaviorReady = false
+memoryModeActive = false
+memoryWordCount / memorySeconds có giá trị profile/default hợp lệ
+```
+
+Sau post ready:
+
+```text
+behaviorReady = true
+```
+
+Bật Memory:
+
+- đúng số từ và số giây đã lưu trong profile;
+- topic filter vẫn đúng;
+- weak prompt vẫn được ưu tiên;
+- Listen đang bật thì phải tắt khi Memory bật và ngược lại;
+- rời Easy phải dừng timer/Memory.
+
+## 5. Boot/transition regression
 
 ```js
 getGoChuBootState()
+getGoChuEasyEntryTransitionHealth()
 ```
 
-Kỳ vọng cuối cùng:
+Kỳ vọng:
 
 ```text
 currentMode = easy
 isBooting = false
+transitionActive = false
+pending jobs về false sau vài frame
 ```
 
-`easy-boot-state.js` chỉ giữ mode trung tính trong lúc module Easy-only critical được nạp; `script.js` sau đó gọi `setMode("easy")` một lần để kích hoạt thật.
+Mobile: `mobileAutofocusSkipped` tăng. Desktop: `desktopAutofocusDeferred` tăng.
 
-## 6. Cache health
+## 6. Cache/prompt loop
 
-Sau khi post-startup ready:
+Sau post ready:
 
 ```js
 getGoChuTopicCacheHealth()
@@ -123,112 +159,61 @@ getGoChuSmartReviewHealth()
 getGoChuVisualHealth()
 ```
 
-Kỳ vọng:
+Luyện 20–30 prompt Easy. Không được có long task lặp, Smart Review/Auto level phải đúng, `lastEasySourcePoolSize` phải là pool topic/level thực tế chứ không toàn `easyWords`.
 
-- topic/word-count cache được tái sử dụng;
-- `lastEasySourcePoolSize` gần pool topic/level thực tế, không phải toàn bộ `easyWords`;
-- `lastEasyRoundBuildMs` nhỏ;
-- weak cache hit tăng khi stats không đổi;
-- visual cache tăng theo prompt đã gặp.
+## 7. Mode regression
 
-## 7. Prompt loop
-
-Luyện 20–30 prompt Easy liên tục, sau đó:
-
-```js
-printGoChuStartupPerformance()
-printGoChuPerformanceHealth()
-getGoChuEasyEntryTransitionHealth()
-getGoChuPostStartupHealth()
-```
-
-Kiểm tra:
-
-- `showText:easy` max không tăng bất thường;
-- không có long task lặp liên tục;
-- input phản hồi tức thì;
-- Smart Review count đúng;
-- topic/Auto level đúng;
-- post-startup loader chỉ chạy một lần.
-
-## 8. Chuyển mode qua lại
-
-Sau khi `GO_CHU_POST_STARTUP_READY === true`, thử tối thiểu 10 vòng:
+Sau `GO_CHU_POST_STARTUP_READY === true`, thử 10 vòng:
 
 ```text
 Easy → Hard → Easy → Free → Easy
 ```
 
-Kỳ vọng:
+Kiểm tra:
 
-- Easy prompt xuất hiện ngay;
-- Hard/Free không lộ control Easy;
-- Free có đủ bài thơ;
-- visual/Vietnamese progress vẫn hoạt động sau post-load;
-- audio/listen dừng đúng khi rời Easy;
-- không tích lũy timer/frame pending.
+- Hard/Free stats ghi đúng và còn sau reload;
+- Free có đủ bài;
+- visual/Vietnamese progress hoạt động;
+- Listen/TTS/Memory hoạt động và không lộ sang Hard/Free;
+- không tích timer/frame pending.
 
-## 9. Lazy-init checks
+## 8. Profile/dashboard
 
-### Profile
-
-Ngay sau load:
+Ngay startup:
 
 ```js
 Boolean(document.getElementById("profileDashboardOverlay"))
 ```
 
-Kỳ vọng: `false`.
+Kỳ vọng `false`.
 
-Bấm 👤 sau post-startup ready → dashboard hoạt động đầy đủ, gồm extension Vietnamese/mode stats.
+Sau post ready mở 👤: dashboard đầy đủ Vietnamese/mode stats; Tab/Escape/focus trap vẫn đúng.
 
-### Asset probe
-
-`asset-reliability.js` là post-startup và bản thân probe còn chờ idle. Không được xuất hiện trong critical first paint.
-
-### Listen
-
-Listen/TTS core vẫn sẵn sàng sớm, nhưng không enumerate voice nếu chưa bật.
-
-### Settings
-
-Voice selector chỉ dựng khi mở Settings.
-
-## 10. Profile persistence regression
-
-1. Tạo ít nhất một lượt Hard hoặc Free.
-2. Ghi lại dashboard stats Hard/Free.
-3. Reload trang.
-4. Đợi post-startup ready rồi mở dashboard.
-
-Kỳ vọng: Hard/Free stats vẫn còn, không reset về 0.
-
-## 11. Browser/device matrix trước UI redesign
-
-Tối thiểu:
+## 9. Browser/device matrix
 
 ```text
-Chrome desktop 1366×768
-Chrome desktop 1920×1080
-Android/Chrome hoặc emulation 390×844
-Landscape 640×360
+Chrome 1366×768
+Chrome 1920×1080
+390×844 mobile
+640×360 landscape
 ```
 
-Nếu Easy vẫn gần treo, lấy cùng lúc:
+Nếu vẫn lag, lấy cùng lúc:
 
 ```js
 printGoChuStartupPerformance()
 getGoChuBootState()
 getGoChuEasyEntryTransitionHealth()
 getGoChuPostStartupHealth()
+getGoChuMemoryStateHealth()
 getGoChuLearningPoolHealth()
 getGoChuSmartReviewHealth()
 ```
 
-Sau post-startup ready lấy thêm:
+Sau post ready lấy thêm:
 
 ```js
 printGoChuPerformanceHealth()
 ```
 
-Không bắt đầu Phase 9 đợt 12 nếu vẫn có startup long task lớn hoặc input chưa usable nhanh.
+Không bắt đầu Phase 9.12 nếu first Easy frame vẫn bị long task lớn hoặc input chưa usable nhanh.
