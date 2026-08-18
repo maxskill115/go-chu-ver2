@@ -1,0 +1,754 @@
+/* ===== PHASE 9.12A - RESPONSIVE LEARNING UI =====
+ * Chỉ thay layout/presentation. Không đổi logic Easy/Hard/Free.
+ */
+
+:root {
+    --gochu-shell-max: 1040px;
+    --gochu-ui-gap: 14px;
+    --gochu-control-radius: 16px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+body {
+    min-height: 100dvh;
+    padding: 74px 16px 24px !important;
+}
+
+.container {
+    width: min(100%, var(--gochu-shell-max)) !important;
+    min-height: 0 !important;
+    margin: 0 auto !important;
+    padding: 28px 38px 30px !important;
+    border-radius: 24px !important;
+}
+
+/* ===== HUD GỌN - CÙNG MỘT THANH ===== */
+.study-hud {
+    position: fixed !important;
+    z-index: 1200 !important;
+    top: 12px !important;
+    left: 50% !important;
+    right: auto !important;
+    width: min(calc(100vw - 24px), 470px) !important;
+    transform: translateX(-50%) !important;
+    pointer-events: none;
+}
+
+.hud-top {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    min-height: 48px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    padding: 5px 8px !important;
+    border-radius: 18px !important;
+    background: rgba(7, 23, 42, 0.92) !important;
+    border: 1px solid rgba(113, 190, 244, 0.42) !important;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.24) !important;
+    backdrop-filter: blur(12px);
+    pointer-events: auto;
+}
+
+.hud-icon-btn,
+#game-menu,
+#profileDashboardBtn,
+#settingsToggleBtn {
+    position: static !important;
+    inset: auto !important;
+    flex: 0 0 40px !important;
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    padding: 0 !important;
+    border-radius: 12px !important;
+    transform: none !important;
+}
+
+.study-time-text,
+#studyTime {
+    position: static !important;
+    inset: auto !important;
+    flex: 1 1 auto !important;
+    min-width: 112px !important;
+    width: auto !important;
+    height: 38px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 14px !important;
+    margin: 0 !important;
+    border-radius: 14px !important;
+    transform: none !important;
+    white-space: nowrap;
+}
+
+.settings-panel {
+    position: absolute !important;
+    top: 56px !important;
+    right: 0 !important;
+    left: auto !important;
+    width: min(360px, calc(100vw - 24px)) !important;
+    max-height: min(70vh, 520px) !important;
+    overflow-y: auto !important;
+    transform: none !important;
+    pointer-events: auto;
+}
+
+/* ===== HEADER / MODE ===== */
+#topBar {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+#topBar h1,
+h1 {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 14px !important;
+    margin: 4px 0 18px !important;
+    font-size: clamp(38px, 4.5vw, 56px) !important;
+    line-height: 1.08 !important;
+}
+
+.title-icon {
+    width: 52px !important;
+    height: 52px !important;
+    min-width: 52px !important;
+}
+
+.mode-row {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+    width: min(100%, 760px) !important;
+    margin: 0 auto 22px !important;
+}
+
+.mode-btn {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 54px !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 10px 14px !important;
+    border-radius: 15px !important;
+    font-size: clamp(17px, 2vw, 23px) !important;
+}
+
+.mode-btn-label {
+    min-width: 0;
+    justify-content: center;
+    gap: 8px !important;
+    white-space: nowrap;
+}
+
+.mode-btn .ui-icon {
+    width: 25px !important;
+    height: 25px !important;
+    min-width: 25px !important;
+}
+
+/* ===== MÀN HÌNH HỌC ===== */
+#normalPanel {
+    display: grid !important;
+    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+    gap: var(--gochu-ui-gap) !important;
+    align-items: stretch !important;
+    width: 100% !important;
+}
+
+#promptVisualWrap {
+    grid-column: 1 / -1 !important;
+    grid-row: auto !important;
+    margin: 0 auto !important;
+    min-height: 0 !important;
+}
+
+.prompt-visual-image,
+.prompt-visual-fallback {
+    width: 88px !important;
+    height: 88px !important;
+    max-width: 88px !important;
+    max-height: 88px !important;
+    object-fit: contain !important;
+}
+
+#text {
+    grid-column: 1 / -1 !important;
+    min-height: 68px !important;
+    margin: 0 !important;
+    padding: 2px 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+    font-size: clamp(40px, 5vw, 60px) !important;
+    line-height: 1.12 !important;
+}
+
+/* Topic / Level thành 1 toolbar duy nhất */
+#topicLevelBar,
+.topic-level-bar {
+    grid-column: 1 / -1 !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(190px, 0.9fr) !important;
+    align-items: end !important;
+    gap: 10px !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 10px 12px !important;
+    border-radius: var(--gochu-control-radius) !important;
+}
+
+.topic-level-field {
+    min-width: 0 !important;
+    gap: 4px !important;
+}
+
+.topic-level-field > span {
+    font-size: 13px !important;
+    line-height: 1.2 !important;
+}
+
+.topic-level-select {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 46px !important;
+    padding: 0 12px !important;
+    border-radius: 12px !important;
+    font-size: 17px !important;
+}
+
+.topic-level-status {
+    min-width: 0 !important;
+    padding: 0 4px 4px !important;
+    font-size: 14px !important;
+    line-height: 1.35 !important;
+    text-align: right !important;
+    overflow-wrap: anywhere;
+}
+
+/* 3 tool chính nằm cùng hàng desktop */
+#listenModeBar,
+.listen-mode-bar {
+    grid-column: 1 / 5 !important;
+}
+
+#memoryModeBar,
+.memory-mode-bar {
+    grid-column: 5 / 9 !important;
+}
+
+#smartReviewBar,
+.smart-review-bar {
+    grid-column: 9 / 13 !important;
+}
+
+.listen-mode-bar,
+.memory-mode-bar,
+.smart-review-bar {
+    min-width: 0 !important;
+    min-height: 56px !important;
+    margin: 0 !important;
+    padding: 7px 9px !important;
+    border-radius: var(--gochu-control-radius) !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+}
+
+.listen-mode-btn,
+.memory-mode-btn,
+.smart-review-btn {
+    min-height: 42px !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 8px 12px !important;
+    border-radius: 12px !important;
+    font-size: 15px !important;
+    line-height: 1.15 !important;
+    white-space: nowrap;
+}
+
+/* Khi chưa bật feature, không hiển thị control phụ chiếm chỗ */
+.listen-mode-bar:not(.active) #listenReplayBtn,
+.listen-mode-bar:not(.active) .listen-mode-status,
+.memory-mode-bar:not(.active) .memory-mode-field,
+.memory-mode-bar:not(.active) .memory-mode-status {
+    display: none !important;
+}
+
+.listen-mode-bar:not(.active) .listen-mode-btn,
+.memory-mode-bar:not(.active) .memory-mode-btn {
+    width: 100% !important;
+}
+
+.memory-mode-bar.active {
+    display: grid !important;
+    grid-template-columns: auto minmax(78px, 1fr) minmax(88px, 1fr) !important;
+}
+
+.memory-mode-field {
+    min-width: 0 !important;
+    gap: 2px !important;
+}
+
+.memory-mode-field > span {
+    font-size: 12px !important;
+}
+
+.memory-mode-select {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 40px !important;
+    padding: 0 8px !important;
+    border-radius: 10px !important;
+    font-size: 14px !important;
+}
+
+.memory-mode-status,
+.listen-mode-status {
+    grid-column: 1 / -1;
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+    text-align: center !important;
+}
+
+.smart-review-info {
+    min-width: 0 !important;
+    font-size: 13px !important;
+    line-height: 1.25 !important;
+}
+
+.smart-review-btn {
+    flex: 0 0 auto !important;
+}
+
+/* Input luôn là trọng tâm */
+#input,
+.typing-input {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-height: 72px !important;
+    height: 72px !important;
+    margin: 0 !important;
+    padding: 10px 20px !important;
+    border-radius: 16px !important;
+    font-size: clamp(26px, 3vw, 34px) !important;
+    line-height: 1.2 !important;
+}
+
+#vietnameseInputGuide,
+.vietnamese-input-guide {
+    grid-column: 1 / -1 !important;
+    margin: -4px 0 0 !important;
+    padding: 7px 12px !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
+}
+
+.next-wrap {
+    grid-column: 1 / -1 !important;
+    display: flex !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+#nextBtn {
+    width: min(100%, 280px) !important;
+    min-height: 62px !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 12px 24px !important;
+    border-radius: 16px !important;
+    font-size: clamp(22px, 2.5vw, 30px) !important;
+}
+
+/* Feedback không được làm layout nhảy hàng trăm pixel */
+#result {
+    grid-column: 1 / -1 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+}
+
+#result:empty {
+    display: none !important;
+}
+
+#result.correct,
+#result.incorrect,
+#result.has-diff,
+#result.incorrect.has-diff {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 12px 16px !important;
+    border-radius: 15px !important;
+}
+
+.typing-diff {
+    gap: 7px !important;
+}
+
+.typing-diff-title {
+    margin: 0 0 4px !important;
+    font-size: clamp(18px, 2.2vw, 24px) !important;
+    line-height: 1.2 !important;
+}
+
+.typing-diff-line {
+    display: grid !important;
+    grid-template-columns: 90px minmax(0, 1fr) !important;
+    gap: 8px !important;
+    align-items: center !important;
+    min-height: 36px !important;
+}
+
+.typing-diff-label {
+    padding: 0 !important;
+    font-size: 13px !important;
+}
+
+.typing-diff-value {
+    font-size: clamp(20px, 2.6vw, 28px) !important;
+    line-height: 1.35 !important;
+}
+
+.typing-diff-char.wrong {
+    padding: 0 4px !important;
+    margin: 0 1px !important;
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 700px) {
+    :root {
+        --gochu-ui-gap: 10px;
+    }
+
+    body {
+        padding: 66px 8px 14px !important;
+    }
+
+    .container {
+        width: 100% !important;
+        padding: 14px 12px 18px !important;
+        border-radius: 18px !important;
+    }
+
+    .study-hud {
+        top: 8px !important;
+        width: calc(100vw - 16px) !important;
+    }
+
+    .hud-top {
+        min-height: 46px !important;
+        padding: 4px 6px !important;
+        border-radius: 15px !important;
+    }
+
+    .hud-icon-btn,
+    #game-menu,
+    #profileDashboardBtn,
+    #settingsToggleBtn {
+        flex-basis: 38px !important;
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        min-height: 38px !important;
+        border-radius: 11px !important;
+    }
+
+    .study-time-text,
+    #studyTime {
+        height: 36px !important;
+        min-width: 92px !important;
+        padding: 0 8px !important;
+        font-size: 15px !important;
+    }
+
+    #topBar h1,
+    h1 {
+        gap: 8px !important;
+        margin: 2px 0 12px !important;
+        font-size: clamp(25px, 8vw, 32px) !important;
+    }
+
+    .title-icon {
+        width: 34px !important;
+        height: 34px !important;
+        min-width: 34px !important;
+    }
+
+    .mode-row {
+        gap: 6px !important;
+        margin-bottom: 14px !important;
+    }
+
+    .mode-btn {
+        min-height: 46px !important;
+        padding: 8px 5px !important;
+        border-radius: 12px !important;
+        font-size: clamp(13px, 4vw, 16px) !important;
+    }
+
+    .mode-btn-label {
+        gap: 4px !important;
+    }
+
+    .mode-btn .ui-icon {
+        width: 18px !important;
+        height: 18px !important;
+        min-width: 18px !important;
+    }
+
+    #text {
+        min-height: 54px !important;
+        padding: 0 4px !important;
+        font-size: clamp(34px, 11vw, 46px) !important;
+    }
+
+    .prompt-visual-image,
+    .prompt-visual-fallback {
+        width: 68px !important;
+        height: 68px !important;
+        max-width: 68px !important;
+        max-height: 68px !important;
+    }
+
+    #topicLevelBar,
+    .topic-level-bar {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 7px !important;
+        padding: 8px !important;
+        border-radius: 13px !important;
+    }
+
+    .topic-level-select {
+        height: 42px !important;
+        padding: 0 8px !important;
+        font-size: 14px !important;
+    }
+
+    .topic-level-field > span {
+        font-size: 11px !important;
+    }
+
+    .topic-level-status {
+        grid-column: 1 / -1 !important;
+        padding: 0 2px !important;
+        font-size: 11px !important;
+        text-align: center !important;
+    }
+
+    /* Mobile: Nghe + Ôn một hàng, Memory hàng riêng */
+    #listenModeBar,
+    .listen-mode-bar {
+        grid-column: 1 / 7 !important;
+    }
+
+    #smartReviewBar,
+    .smart-review-bar {
+        grid-column: 7 / 13 !important;
+    }
+
+    #memoryModeBar,
+    .memory-mode-bar {
+        grid-column: 1 / -1 !important;
+    }
+
+    .listen-mode-bar,
+    .memory-mode-bar,
+    .smart-review-bar {
+        min-height: 48px !important;
+        padding: 5px 6px !important;
+        border-radius: 13px !important;
+    }
+
+    .smart-review-info {
+        display: none !important;
+    }
+
+    .smart-review-btn,
+    .listen-mode-btn,
+    .memory-mode-btn {
+        width: 100% !important;
+        min-height: 40px !important;
+        padding: 7px 7px !important;
+        font-size: 13px !important;
+    }
+
+    .memory-mode-bar.active {
+        grid-template-columns: 1fr 0.8fr 0.9fr !important;
+    }
+
+    .memory-mode-field > span {
+        font-size: 10px !important;
+    }
+
+    .memory-mode-select {
+        height: 38px !important;
+        font-size: 12px !important;
+        padding: 0 5px !important;
+    }
+
+    #input,
+    .typing-input {
+        min-height: 62px !important;
+        height: 62px !important;
+        padding: 8px 14px !important;
+        border-radius: 13px !important;
+        font-size: clamp(24px, 7vw, 30px) !important;
+    }
+
+    #nextBtn {
+        width: 100% !important;
+        min-height: 56px !important;
+        padding: 9px 16px !important;
+        border-radius: 13px !important;
+        font-size: 22px !important;
+    }
+
+    #result.correct,
+    #result.incorrect,
+    #result.has-diff,
+    #result.incorrect.has-diff {
+        padding: 10px 11px !important;
+        border-radius: 13px !important;
+    }
+
+    .typing-diff-title {
+        font-size: 18px !important;
+    }
+
+    .typing-diff-line {
+        grid-template-columns: 64px minmax(0, 1fr) !important;
+        gap: 6px !important;
+        min-height: 30px !important;
+    }
+
+    .typing-diff-label {
+        font-size: 11px !important;
+    }
+
+    .typing-diff-value {
+        font-size: 20px !important;
+    }
+}
+
+/* ===== LANDSCAPE THẤP ===== */
+@media (max-height: 520px) and (orientation: landscape) {
+    body {
+        padding-top: 54px !important;
+    }
+
+    .study-hud {
+        top: 4px !important;
+    }
+
+    .hud-top {
+        min-height: 42px !important;
+    }
+
+    .container {
+        padding-top: 8px !important;
+        padding-bottom: 10px !important;
+    }
+
+    #topBar h1,
+    h1 {
+        display: none !important;
+    }
+
+    .mode-row {
+        margin-bottom: 8px !important;
+    }
+
+    .mode-btn {
+        min-height: 40px !important;
+        padding: 5px 8px !important;
+    }
+
+    #normalPanel {
+        gap: 7px !important;
+    }
+
+    #promptVisualWrap:not(.hidden) {
+        position: absolute;
+        opacity: 0.9;
+        pointer-events: none;
+    }
+
+    .prompt-visual-image,
+    .prompt-visual-fallback {
+        width: 48px !important;
+        height: 48px !important;
+    }
+
+    #text {
+        min-height: 42px !important;
+        font-size: clamp(30px, 7vh, 40px) !important;
+    }
+
+    #topicLevelBar,
+    .topic-level-bar {
+        padding: 5px 8px !important;
+    }
+
+    .topic-level-field > span,
+    .topic-level-status {
+        display: none !important;
+    }
+
+    .topic-level-select {
+        height: 38px !important;
+    }
+
+    .listen-mode-bar,
+    .memory-mode-bar,
+    .smart-review-bar {
+        min-height: 42px !important;
+        padding: 3px 5px !important;
+    }
+
+    .listen-mode-btn,
+    .memory-mode-btn,
+    .smart-review-btn {
+        min-height: 36px !important;
+        padding: 5px 8px !important;
+    }
+
+    #input,
+    .typing-input {
+        min-height: 52px !important;
+        height: 52px !important;
+        font-size: 24px !important;
+    }
+
+    #nextBtn {
+        min-height: 46px !important;
+        font-size: 20px !important;
+    }
+
+    #result.correct,
+    #result.incorrect,
+    #result.has-diff,
+    #result.incorrect.has-diff {
+        padding: 7px 10px !important;
+    }
+}
