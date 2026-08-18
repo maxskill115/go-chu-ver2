@@ -4,21 +4,23 @@
 
 Web HTML/CSS/JS thuần cho bé luyện **đọc → gõ → sửa lỗi → ôn lại → nghe → nhớ**, có chủ đề, cấp độ, hồ sơ riêng, thống kê và hỗ trợ tiếng Việt.
 
-### Quy tắc bắt buộc
+### Quy tắc làm việc bắt buộc
 
 - Không backend khi chưa cần.
 - Không refactor lớn nếu không cần.
-- Mỗi phase lớn: branch riêng → PR → CI → squash merge `main`.
-- Mọi thay đổi/plan/quyết định kỹ thuật/PR/commit phải cập nhật tại đây.
+- Mỗi đợt lớn: branch riêng → PR → CI → squash merge `main`.
+- **Mọi thay đổi, plan, điều tra nguyên nhân, PR/commit và việc còn lại đều phải ghi vào HANDOFF này.**
 - Easy-only feature không được lộ sang Hard/Free.
 - UI phải dùng tốt PC + mobile.
 - Không đưa API key/credential vào browser/runtime.
-- Với vấn đề hiệu năng: **điều tra/trace nguyên nhân trước, sau khi xác định thì tự fix luôn, không hỏi lại người dùng giữa chừng**.
+- Với lỗi hiệu năng: **điều tra/trace nguyên nhân trước → xác định xong thì tự fix luôn → không hỏi lại người dùng giữa chừng.**
 - Không tối ưu cảm tính bằng CSS nếu chưa xác định hot-path/runtime/network/layout liên quan.
 
 ---
 
 ## 2. Roadmap hiện tại
+
+### Hoàn tất
 
 - [x] Phase 0 — Khởi tạo ver2.
 - [x] Phase 1 — Levenshtein diff + hotfix UI bỏ ô đỏ/SP.
@@ -45,8 +47,8 @@ Web HTML/CSS/JS thuần cho bé luyện **đọc → gõ → sửa lỗi → ôn
 - [x] Đợt 11 — Easy CPU startup rewrite.
 - [x] Đợt 11B — startup network parallel + lazy audio.
 - [x] Đợt 11C — Easy entry fast-path.
-- [~] **Đợt 11D — Easy boot state + transition gate (đang triển khai trên `agent/easy-entry-transition-gate`).**
-- [ ] Browser/device performance gate trên Vercel/local thật.
+- [x] **Đợt 11D — Easy boot state + transition gate.**
+- [ ] **Browser/device performance gate trên Vercel/local thật.**
 - [ ] **Đợt 12 — responsive UI redesign PC/mobile.**
 
 ### Phase 10 — Pre-rendered Google TTS MP3
@@ -87,14 +89,13 @@ Web HTML/CSS/JS thuần cho bé luyện **đọc → gõ → sửa lỗi → ôn
 - Handoff startup network: PR #32 → `2f28b49`
 - Easy entry fast-path: PR #33 → `b6876c0`
 - Handoff Easy fast-path: PR #34 → `0c86aba`
-- **Easy boot/transition 11D: branch `agent/easy-entry-transition-gate`, PR/commit cập nhật sau CI/merge.**
+- **Easy boot/transition 11D: PR #35 → `3d63d67`**
 
-### Ghi chú tooling/cleanup
+### Tooling cleanup đã biết
 
-- Có branch rỗng `noop` tạo nhầm trước đây; không ảnh hưởng `main`.
-- `EASY_ENTRY_FIX.tmp` từng được tạo nhầm trên `main` rồi đã xóa.
-- `noop.tmp` và `TEMP_SHOULD_NOT_EXIST.tmp` từng được tạo nhầm trong lúc chuyển tool ở đợt 11D; cả hai đã xóa ngay, không còn trong tree hiện tại.
-- Các commit tạo/xóa file tạm chỉ là lịch sử tooling, không thuộc runtime release.
+- Branch rỗng `noop` từng tạo nhầm; không ảnh hưởng `main`.
+- `EASY_ENTRY_FIX.tmp`, `noop.tmp`, `TEMP_SHOULD_NOT_EXIST.tmp` từng tạo nhầm trong quá trình chuyển tool và đã xóa ngay; không còn trong tree release.
+- Các commit tạo/xóa file tạm chỉ là lịch sử tooling, không thuộc runtime feature.
 
 ---
 
@@ -123,7 +124,7 @@ Chỉ Easy được chạy/hiển thị:
 
 ---
 
-## 5. Performance fixes đã merge / đang làm
+## 5. Lịch sử điều tra hiệu năng Easy
 
 ### 5.1 Freeze/stability — PR #26
 
@@ -141,9 +142,9 @@ printGoChuPerformanceHealth()
 
 ### 5.2 Easy CPU startup rewrite — PR #29
 
-Root cause cũ: `buildSmartEasyRound()` từng tính/filter topic + effective level lặp quá nhiều trên toàn kho Easy, gần O(n²) trong một số luồng.
+Root cause cũ: `buildSmartEasyRound()` từng tính/filter topic + effective level lặp quá nhiều trên toàn kho Easy, gần O(n²).
 
-Cache đã thêm:
+Cache chính:
 
 ```js
 GO_CHU_UNIQUE_EASY_PROMPTS
@@ -155,7 +156,7 @@ goChuTopicPoolCache
 goChuLevelPoolCache
 ```
 
-Các phần phụ đã lazy/defer khỏi first paint:
+Đã lazy/defer khỏi first paint:
 
 - visual semantic matching + image request;
 - Web Speech voice enumeration;
@@ -166,17 +167,16 @@ Các phần phụ đã lazy/defer khỏi first paint:
 
 Audit phát hiện:
 
-- `styles.css` là chuỗi 13 `@import`;
-- khoảng 27 external JS classic script;
+- `styles.css` từng là chuỗi 13 `@import`;
+- khoảng 27 JS classic script;
 - 2 MP3 nền + 2 WAV bị tạo/preload quá sớm.
 
 Fix:
 
 - production `index.html` link trực tiếp stylesheet trong `<head>`;
-- JS dùng `<script src="..." defer>` để tải song song nhưng giữ execute order;
+- JS dùng `defer` để tải song song nhưng giữ execute order;
 - `audio-lazy-bootstrap.js` nạp trước `script-core.js`;
-- `new Audio(url)` không gắn `src` ở startup;
-- chỉ audio thực sự `play()` sau user activation mới tải.
+- audio chỉ gắn `src` khi chính nguồn đó thật sự `play()` sau user activation.
 
 Debug:
 
@@ -190,25 +190,24 @@ CI:
 tools/verify_startup_loading.py
 ```
 
-### 5.4 Easy entry fast-path — PR #33 → `b6876c0`
+### 5.4 Easy entry fast-path — PR #33
 
 Audit đường:
 
 ```text
 setMode("easy")
-→ shuffleEasyWords()
 → buildSmartEasyRound()
 → topic/level filter
 → showText + UI wrappers
 ```
 
-Root cause còn lãng phí:
+Root cause còn lại lúc đó:
 
 ```text
 Toàn bộ easyWords
 → shuffle toàn bộ
 → chèn weak prompt
-→ cuối cùng mới filter theo Chủ đề/Cấp độ
+→ cuối cùng mới filter Chủ đề/Cấp độ
 ```
 
 Fix 11C:
@@ -221,8 +220,6 @@ getEffectiveLearningLevel() một lần
 → show prompt
 ```
 
-Không còn build toàn library rồi filter sau.
-
 Weak prompt cache:
 
 ```js
@@ -231,8 +228,6 @@ goChuWeakPromptCache
 goChuWeakPromptCacheStatsRef
 goChuWeakPromptCacheRevision
 ```
-
-Smart Review/Topic UI được coalesce bằng rAF.
 
 Timing:
 
@@ -246,89 +241,77 @@ CI:
 tools/verify_easy_entry.py
 ```
 
-### 5.5 Điều tra 11D — duplicate Easy initialization + layout/focus race
+### 5.5 Điều tra sâu 11D
 
-Sau PR #33 user vẫn yêu cầu tiếp tục điều tra trước khi fix.
+Sau 11C tiếp tục trace toàn bộ:
 
-#### Phát hiện 1 — Easy bị coi là active quá sớm
+```text
+script-core init
+→ module Easy-only load
+→ profile route
+→ setMode("easy")
+→ showText wrapper chain
+→ DOM/layout/focus
+```
 
-`script-core.js` baseline đang có:
+#### Root cause A — phantom Easy initialization
+
+Baseline `script-core.js` khởi tạo:
 
 ```js
 let currentMode = "easy";
 ```
 
-Nhưng `script.js` cuối chuỗi lại tiếp tục gọi:
+trong khi `script.js` cuối chuỗi lại gọi:
 
 ```js
 setMode("easy");
 ```
 
-Trong khoảng giữa hai thời điểm này, các module nạp theo thứ tự:
+Các module Smart Review / Listen / TTS / Memory / Topic / Vietnamese UI được nạp ở giữa và đã nhìn thấy `currentMode === "easy"`.
 
-```text
-Smart Review
-Visual
-Listen/TTS
-Memory
-Topic/Level
-Profile
-Vietnamese input
-```
+=> Một số workload Easy chạy **trước activation thật**, rồi chạy thêm lần nữa khi `setMode("easy")`.
 
-đã đọc `currentMode === "easy"` và một số module tự dựng/update workload Easy trước lần `setMode("easy")` chính thức.
+#### Root cause B — duplicate UI update khi setMode unwind
 
-=> **Easy có một lượt “phantom initialization” trong lúc load module, rồi một lượt activation thật sau đó.**
+Base `setMode("easy")` gọi `showText()`.
 
-#### Phát hiện 2 — wrapper chain update Easy lặp khi setMode unwind
+`showText()` chain đã update/schedule:
 
-Trong `setMode("easy")`, base `setMode` gọi `showText()`.
-
-`showText()` wrapper chain đã thực hiện/schedule:
-
-- Smart Review UI;
+- Smart Review;
 - Visual;
-- Listen status;
-- Memory status;
-- Topic status;
-- Vietnamese word progress/guide.
+- Listen;
+- Memory;
+- Topic/Level;
+- Vietnamese progress/guide.
 
-Sau khi base `setMode` trả về, các wrapper `setMode` tương ứng lại update/schedule các phần trên thêm lần nữa.
+Sau đó các wrapper `setMode` tương ứng lại update/schedule một lượt nữa khi unwind.
 
-=> Không phải O(n²) nữa, nhưng vẫn có **nhiều DOM/class/text update trùng trong cùng một transition**.
+=> nhiều DOM/class/text update trùng trong cùng transition.
 
-#### Phát hiện 3 — autofocus xảy ra giữa critical layout
+#### Root cause C — autofocus giữa critical layout
 
-Base `showText()` gọi:
+Base `showText()` gọi `input.focus()` trước khi toàn bộ Easy UI hoàn tất.
 
-```js
-input.focus();
-```
-
-ngay trước khi toàn bộ wrapper Easy hoàn tất.
-
-Trên mobile/touch, focus có thể:
+Trên mobile:
 
 ```text
-mở keyboard
+focus input
+→ bật keyboard
 → resize visual viewport
-→ kích layout/media-query
-→ trong lúc Easy controls vẫn đang được show/hide/update
+→ media-query/layout chạy
+→ trong lúc Easy controls vẫn đang đổi
 ```
 
-=> Đây là nguồn jank/độ trễ rất đáng kể trên mobile và có thể tạo cảm giác “vào mode bị treo”.
+=> gây jank/độ trễ mạnh và cảm giác tab bị treo.
 
-### 5.6 Fix 11D đang triển khai
+---
 
-Branch:
+## 6. Phase 9 đợt 11D — đã merge PR #35 → `3d63d67`
 
-```text
-agent/easy-entry-transition-gate
-```
+### `easy-boot-state.js`
 
-#### `easy-boot-state.js`
-
-Nạp:
+Load order:
 
 ```text
 script-core.js
@@ -336,13 +319,13 @@ script-core.js
 → smart-review.js / các module Easy-only
 ```
 
-Nó chuyển tạm:
+Tạm chuyển:
 
 ```js
 currentMode = "__boot__";
 ```
 
-Mục tiêu: module Easy-only chỉ dựng shell nhẹ trong lúc load, không chạy logic Easy cho đến `script.js → setMode("easy")`.
+=> module Easy-only chỉ dựng shell nhẹ trong lúc load; `script.js` sau đó mới gọi `setMode("easy")` một lần để activate thật.
 
 Debug:
 
@@ -350,9 +333,9 @@ Debug:
 getGoChuBootState()
 ```
 
-#### `easy-entry-transition.js`
+### `easy-entry-transition.js`
 
-Nạp:
+Load order:
 
 ```text
 startup-runtime-instrument.js
@@ -360,7 +343,7 @@ startup-runtime-instrument.js
 → script.js
 ```
 
-Gate bọc final `setMode` và coalesce các update trong lúc vào Easy:
+Gate bọc final `setMode` và coalesce các update lúc vào Easy:
 
 ```text
 scheduleSmartReviewBarUpdate
@@ -375,101 +358,75 @@ updateVietnameseInputGuide
 Core path vẫn đồng bộ:
 
 ```text
-set currentMode
+set mode
 build filtered round
 show prompt
 clear input/result
 return
 ```
 
-UI phụ flush sau **double requestAnimationFrame** để browser có một paint cho prompt/input trước.
+UI phụ flush sau **double requestAnimationFrame**, cho browser một paint của prompt/input trước.
 
-Visual được gọi cuối; bản thân visual lại dùng rAF nên network/image work bị đẩy thêm một frame khỏi critical path.
+Visual chạy cuối; bản thân visual còn rAF thêm một nhịp nên image/network không chen vào core transition.
 
-#### Autofocus policy 11D
+### Autofocus policy 11D
 
 Trong lúc `setMode("easy")`:
 
-- input tạm `disabled` để base `input.focus()` trở thành no-op;
+- input tạm `disabled` để base `input.focus()` là no-op;
 - sau core transition input được khôi phục;
-- desktop: focus được defer sau 2 frame với `preventScroll`;
-- mobile/coarse pointer: **không tự focus**, để bé chạm input rồi keyboard mới mở.
+- desktop: focus sau 2 frame với `preventScroll`;
+- mobile/coarse pointer: **không tự focus**, bé chạm input rồi keyboard mới mở.
 
-#### Diagnostics 11D
+### Diagnostics mới
 
 ```js
 getGoChuEasyEntryTransitionHealth()
 ```
 
-Trả:
+Có:
 
-- `easyEntries`;
-- `bootFramesCancelled`;
-- `deferredCalls`;
-- `auxFlushes`;
-- `lastSyncEntryMs`;
-- `lastAuxFlushMs`;
-- mobile/desktop autofocus counters;
-- pending UI jobs.
+```text
+easyEntries
+bootFramesCancelled
+deferredCalls
+auxFlushes
+lastSyncEntryMs
+lastAuxFlushMs
+mobileAutofocusSkipped
+desktopAutofocusDeferred
+pending UI jobs
+```
 
-Startup measures mới:
+Startup measures:
 
 ```text
 easy:entrySyncGate
 easy:auxUiFlush
 ```
 
-#### QA/CI 11D
+### CI/QA 11D
 
-`PERFORMANCE_QA.md` đã bổ sung test boot/transition/mobile autofocus.
-
-CI mới:
-
-```text
-tools/verify_easy_transition.py
-```
-
-Guard:
-
-- `script-core → easy-boot-state → smart-review`;
-- `startup-runtime-instrument → easy-entry-transition → script.js`;
-- boot state phải là `__boot__`;
-- transition phải có double rAF;
-- phải defer Easy auxiliary UI;
-- mobile autofocus không được chạy vô điều kiện.
+- `tools/verify_easy_transition.py`
+- `PERFORMANCE_QA.md` có boot/transition/mobile autofocus test.
+- PR #35 CI **PASS toàn bộ** trước khi squash merge.
 
 ---
 
-## 6. Runtime diagnostics hiện có
+## 7. Runtime diagnostics hiện có
 
-Console:
+Khi điều tra Easy ưu tiên lấy cùng lúc:
 
 ```js
 printGoChuStartupPerformance()
 printGoChuPerformanceHealth()
 getGoChuBootState()
 getGoChuEasyEntryTransitionHealth()
-getGoChuTopicCacheHealth()
 getGoChuLearningPoolHealth()
 getGoChuSmartReviewHealth()
-getGoChuAudioBootstrapHealth()
-getGoChuTtsHealth()
-getGoChuVisualHealth()
-getGoChuAssetHealth()
-getGoChuStorageHealth()
 ```
 
-Khi điều tra Easy, ưu tiên lấy cùng lúc:
-
-```js
-printGoChuStartupPerformance()
-printGoChuPerformanceHealth()
-getGoChuLearningPoolHealth()
-getGoChuSmartReviewHealth()
-getGoChuEasyEntryTransitionHealth()
-```
-
-Các stage cần nhìn:
+Các stage quan trọng:
 
 ```text
 setMode:easy
@@ -479,11 +436,22 @@ easy:entrySyncGate
 easy:auxUiFlush
 ```
 
+Các health khác:
+
+```js
+getGoChuTopicCacheHealth()
+getGoChuAudioBootstrapHealth()
+getGoChuTtsHealth()
+getGoChuVisualHealth()
+getGoChuAssetHealth()
+getGoChuStorageHealth()
+```
+
 ---
 
-## 7. Responsive UI redesign — Phase 9 đợt 12
+## 8. Responsive UI redesign — Phase 9 đợt 12
 
-Chỉ bắt đầu khi Easy entry đã ổn định trên browser/device thật.
+**Chưa bắt đầu cho tới khi kiểm tra 11D trên browser/device thật.**
 
 ### PC >= 1024px
 
@@ -498,8 +466,6 @@ Input
 Tiếp theo
 Feedback fixed-height
 ```
-
-Không còn 3–4 khung tool lớn xếp dọc như UI hiện tại.
 
 ### Mobile <= 767px
 
@@ -516,17 +482,17 @@ Tiếp theo
 Feedback
 ```
 
-- title lớn thu gọn khi bắt đầu học;
-- input ưu tiên viewport + bàn phím;
+- title lớn thu gọn khi học;
+- input ưu tiên viewport + keyboard;
 - touch target >= 48px;
 - Memory Mức/Thời gian chỉ hiện khi active;
-- Nghe lại chỉ hiện khi Listen active.
+- Nghe lại chỉ hiện khi Listen active;
+- không auto-open keyboard khi vừa vào Easy.
 
 ### Dashboard
 
-Desktop: summary cards + tabs.
-
-Mobile: full-screen sheet + tab/accordion, không dùng modal dài hàng nghìn px.
+- Desktop: summary cards + tabs.
+- Mobile: full-screen sheet + tab/accordion.
 
 ### QA kích thước
 
@@ -544,7 +510,7 @@ thêm zoom 125%/150%.
 
 ---
 
-## 8. Google TTS
+## 9. Google TTS
 
 Easy-only runtime:
 
@@ -566,7 +532,7 @@ MP3 thật chưa render vì chờ Google Cloud account người dùng.
 
 ---
 
-## 9. Visual pipeline
+## 10. Visual pipeline
 
 Twemoji pinned `jdecked/twemoji@17.0.3`.
 
@@ -581,14 +547,23 @@ Không match semantic → không hiện hình.
 
 ---
 
-## 10. Thứ tự tiếp theo
+## 11. Thứ tự tiếp theo cho phiên làm việc sau
 
-1. Hoàn tất 11D trên `agent/easy-entry-transition-gate`.
-2. Chạy CI toàn bộ JS/Python/startup/Easy guards.
-3. Nếu CI fail: sửa trên branch, không merge mù.
-4. Nếu CI PASS: squash merge `main`, cập nhật PR/commit thật vào HANDOFF.
-5. Test Vercel/local với `getGoChuEasyEntryTransitionHealth()` + startup report.
-6. Nếu Easy ổn → bắt đầu Phase 9 đợt 12 UI redesign.
-7. Nếu vẫn chậm → dùng stage timing 11D để xác định phần còn lại rồi **điều tra → fix luôn**, không hỏi lại giữa chừng.
-8. Sau UI redesign chạy full PC/mobile QA.
-9. Sau cùng hoàn thiện Google TTS binary/Twemoji local nếu muốn offline 100%.
+1. Pull/đợi deploy commit runtime **`3d63d67`** và handoff bookkeeping mới.
+2. Test Vercel/local mode Easy với:
+
+```js
+printGoChuStartupPerformance()
+printGoChuPerformanceHealth()
+getGoChuBootState()
+getGoChuEasyEntryTransitionHealth()
+getGoChuLearningPoolHealth()
+getGoChuSmartReviewHealth()
+```
+
+3. Xác nhận `currentMode=easy`, `isBooting=false`, pending jobs về false sau vài frame.
+4. Mobile: vào Easy **không tự bật keyboard**; tap input mới mở.
+5. Nếu Easy vẫn chậm: đọc stage timing, **điều tra phần còn lại rồi fix luôn**, không hỏi lại giữa chừng.
+6. Chỉ khi Easy đạt performance gate mới bắt đầu Phase 9 đợt 12 redesign UI PC/mobile.
+7. Sau redesign chạy full PC/mobile QA.
+8. Sau cùng hoàn thiện Google TTS binary/Twemoji local nếu muốn offline 100%.
