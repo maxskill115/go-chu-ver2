@@ -29,20 +29,21 @@ def read(path: str) -> str:
 
 def check_script_refs() -> None:
     html = read("index.html")
+    post = read("post-startup-loader.js")
     refs = re.findall(r'<script\s+src="([^"]+)"', html)
     missing = [ref for ref in refs if not (ROOT / ref).exists()]
     if missing:
         fail(f"index.html tham chiếu script không tồn tại: {missing}")
-    ok(f"{len(refs)} script refs đều tồn tại")
 
     required_order = [
         "startup-performance.js",
         "data-easy.js",
         "tts-manifest.js",
-        "visual-data.js",
-        "twemoji-local-manifest.js",
+        "topic-data.js",
+        "audio-lazy-bootstrap.js",
         "script-core.js",
-        "visual-prompt.js",
+        "easy-boot-state.js",
+        "smart-review.js",
         "listen-mode.js",
         "ux-hotfix.js",
         "tts-local.js",
@@ -50,30 +51,62 @@ def check_script_refs() -> None:
         "topic-level.js",
         "profile-stats.js",
         "startup-runtime-instrument.js",
+        "easy-entry-transition.js",
         "script.js",
-        "stability-fixes.js",
-        "mode-stats.js",
-        "performance-health.js",
-        "debug-smoke.js",
+        "post-startup-loader.js",
     ]
     positions = {ref: refs.index(ref) if ref in refs else -1 for ref in required_order}
     missing_required = [name for name, pos in positions.items() if pos < 0]
     if missing_required:
-        fail(f"Thiếu script bắt buộc: {missing_required}")
+        fail(f"Thiếu critical script bắt buộc: {missing_required}")
     if any(positions[required_order[i]] >= positions[required_order[i + 1]] for i in range(len(required_order) - 1)):
-        fail("Load order script quan trọng không đúng")
-    ok("Load order runtime chính hợp lệ")
+        fail("Load order critical runtime không đúng")
+
+    post_required = [
+        "data-poems.js",
+        "visual-data.js",
+        "twemoji-local-manifest.js",
+        "visual-prompt.js",
+        "vietnamese-input.js",
+        "vietnamese-dashboard.js",
+        "stability-fixes.js",
+        "mode-stats.js",
+        "storage-health.js",
+        "asset-reliability.js",
+        "accessibility.js",
+        "performance-health.js",
+        "debug-smoke.js",
+    ]
+    leaked = [name for name in post_required if name in refs]
+    if leaked:
+        fail(f"Post-startup script bị đưa lại critical path: {leaked}")
+    missing_post = [name for name in post_required if name not in post]
+    if missing_post:
+        fail(f"Post loader thiếu module: {missing_post}")
+
+    ok(f"Critical refs {len(refs)} file; post-startup modules {len(post_required)} file")
 
 
 def check_styles() -> None:
-    styles = read("styles.css")
-    if '@import url("ui-scope-fixes.css");' not in styles:
-        fail("styles.css chưa import ui-scope-fixes.css")
+    html = read("index.html")
     scope = read("ui-scope-fixes.css")
+    post = read("post-startup-loader.js")
     compact = re.sub(r"\s+", "", scope)
+
+    if 'href="styles.css"' in html:
+        fail("Production không được quay lại styles.css/@import waterfall")
+    if 'href="ui-scope-fixes.css"' not in html:
+        fail("ui-scope-fixes.css phải nằm trong critical CSS cascade")
     if ".hidden-by-mode" not in scope or "display:none!important" not in compact:
         fail("UI scope guard cho hidden-by-mode chưa đủ mạnh")
-    ok("UI scope stylesheet đã được nạp cuối cascade")
+
+    optional = ["visual-prompt.css", "vietnamese-input.css", "accessibility.css", "asset-reliability.css"]
+    for name in optional:
+        if f'href="{name}"' in html:
+            fail(f"Optional CSS không được block first paint: {name}")
+        if name not in post:
+            fail(f"Post loader thiếu optional CSS: {name}")
+    ok("Critical/post-startup CSS split hợp lệ")
 
 
 def extract_visual_codes() -> list[str]:
@@ -140,6 +173,9 @@ def check_easy_startup_performance_guards() -> None:
     asset = read("asset-reliability.js")
     startup = read("startup-performance.js")
     runtime_startup = read("startup-runtime-instrument.js")
+    boot = read("easy-boot-state.js")
+    transition = read("easy-entry-transition.js")
+    post = read("post-startup-loader.js")
 
     required_topic = [
         "GO_CHU_UNIQUE_EASY_PROMPTS",
@@ -159,7 +195,9 @@ def check_easy_startup_performance_guards() -> None:
         fail("Smart Easy round quay lại tính filter/level lặp trên từng prompt")
 
     if "goChuVisualMatchCache" not in visual or "schedulePromptVisual" not in visual or "requestAnimationFrame" not in visual:
-        fail("Visual chưa cache/defer sau first paint")
+        fail("Visual chưa cache/defer")
+    if 'if(currentMode === "easy" && currentPrompt)' not in visual:
+        fail("Visual post-load phải hydrate prompt Easy hiện tại")
 
     hud_block = re.search(r"function ensureProfileHud\(\).*?\n}\n\nfunction updateProfileHud", profile, flags=re.S)
     if hud_block and "ensureProfileDashboard()" in hud_block.group(0):
@@ -186,6 +224,12 @@ def check_easy_startup_performance_guards() -> None:
         fail("Thiếu startup performance report")
     if "setModeEasy:start" not in runtime_startup or "easy:firstInputReady" not in runtime_startup:
         fail("Thiếu marker startup Easy")
+    if 'currentMode = "__boot__"' not in boot:
+        fail("Thiếu neutral Easy boot state")
+    if "getGoChuEasyEntryTransitionHealth" not in transition or transition.count("requestAnimationFrame") < 2:
+        fail("Thiếu Easy transition gate/double RAF")
+    if "GO_CHU_POST_STARTUP_READY" not in post or "getGoChuPostStartupHealth" not in post:
+        fail("Thiếu post-startup readiness diagnostics")
 
     ok("Easy startup performance guards tồn tại")
 
@@ -232,6 +276,9 @@ def check_tools() -> None:
         "tools/render_google_tts.py",
         "tools/vendor_twemoji.py",
         "tools/verify_repository.py",
+        "tools/verify_startup_loading.py",
+        "tools/verify_easy_entry.py",
+        "tools/verify_easy_transition.py",
         "tools/render_google_tts.bat",
         "tools/vendor_twemoji.bat",
     ]
