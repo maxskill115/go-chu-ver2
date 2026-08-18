@@ -1,13 +1,11 @@
-/* ===== PHASE 9 ĐỢT 11E - POST STARTUP FEATURE LOADER =====
- * Nạp ngay SAU script.js. Easy core đã activate trước khi file này chạy.
- *
- * Mục tiêu:
- * - cho browser paint prompt/input Easy trước;
- * - sau double RAF mới bắt đầu tải các module không cần cho first usable frame;
- * - script hậu kỳ vẫn execute đúng thứ tự dependency nhờ dynamic script async=false.
+/* ===== PHASE 9 ĐỢT 11E/11F - POST STARTUP FEATURE LOADER =====
+ * Easy core activate trước; feature không cần cho first usable frame tải sau double RAF.
  */
 (function(){
     const POST_STYLES = Object.freeze([
+        "listen-mode.css",
+        "ux-hotfix.css",
+        "memory-mode.css",
         "visual-prompt.css",
         "vietnamese-input.css",
         "accessibility.css",
@@ -16,9 +14,15 @@
 
     const POST_SCRIPTS = Object.freeze([
         "data-poems.js",
+        "tts-manifest.js",
         "visual-data.js",
         "twemoji-local-manifest.js",
         "visual-prompt.js",
+        "listen-mode.js",
+        "ux-hotfix.js",
+        "tts-local.js",
+        "memory-mode.js",
+        "memory-topic-bridge.js",
         "vietnamese-input.js",
         "vietnamese-dashboard.js",
         "stability-fixes.js",
@@ -40,7 +44,9 @@
         loadedScripts: 0,
         failedScripts: [],
         loadedStyles: 0,
-        failedStyles: []
+        failedStyles: [],
+        runtimeValidated: false,
+        runtimeChecks: {}
     };
 
     window.GO_CHU_POST_STARTUP_STYLES = POST_STYLES;
@@ -69,7 +75,6 @@
                 resolve({ href, ok: true, reused: true });
                 return;
             }
-
             const link = document.createElement("link");
             link.rel = "stylesheet";
             link.href = href;
@@ -86,10 +91,8 @@
                 resolve({ src, ok: true, reused: true });
                 return;
             }
-
             const script = document.createElement("script");
             script.src = src;
-            /* Dynamic scripts mặc định async=true; phải tắt để giữ dependency order. */
             script.async = false;
             script.dataset.gochuPostScript = src;
             script.addEventListener("load", () => resolve({ src, ok: true }), { once: true });
@@ -98,22 +101,49 @@
         });
     }
 
+    function validatePostRuntime(){
+        const checks = {
+            freeData: typeof freePoems !== "undefined" && Array.isArray(freePoems),
+            listen: typeof setListenMode === "function" && typeof toggleListenMode === "function",
+            tts: typeof getGoChuTtsHealth === "function",
+            memory: typeof setMemoryMode === "function" && Boolean(window.GO_CHU_MEMORY_BEHAVIOR_READY),
+            memoryTopic: Boolean(window.GO_CHU_MEMORY_TOPIC_BRIDGE_READY),
+            vietnameseInput: typeof refreshVietnameseProgressUI === "function",
+            modeStats: typeof getStandaloneModeSummary === "function",
+            storage: typeof getGoChuStorageHealth === "function",
+            performance: typeof getGoChuPerformanceHealth === "function"
+        };
+        state.runtimeChecks = checks;
+        state.runtimeValidated = Object.values(checks).every(Boolean);
+        return state.runtimeValidated;
+    }
+
     function finishPostStartup(styleResults, scriptResults){
         state.loadedStyles = styleResults.filter(item => item.ok).length;
         state.failedStyles = styleResults.filter(item => !item.ok).map(item => item.href);
         state.loadedScripts = scriptResults.filter(item => item.ok).length;
         state.failedScripts = scriptResults.filter(item => !item.ok).map(item => item.src);
-        state.ready = state.failedScripts.length === 0;
+
+        const runtimeOk = validatePostRuntime();
+        if(!runtimeOk){
+            const missing = Object.entries(state.runtimeChecks)
+                .filter(([, value]) => !value)
+                .map(([name]) => name);
+            state.failedScripts.push(`runtime:${missing.join(",")}`);
+        }
+
+        state.ready = state.failedScripts.length === 0 && runtimeOk;
         state.loading = false;
         state.readyAt = performance.now();
         state.durationMs = state.readyAt - state.startedAt;
-
         window.GO_CHU_POST_STARTUP_READY = state.ready;
         setSecondaryModesPending(!state.ready);
 
         window.dispatchEvent(new CustomEvent("gochu:post-startup-ready", {
             detail: {
                 ready: state.ready,
+                runtimeValidated: state.runtimeValidated,
+                runtimeChecks: { ...state.runtimeChecks },
                 failedScripts: [...state.failedScripts],
                 failedStyles: [...state.failedStyles]
             }
@@ -129,20 +159,10 @@
         state.loading = true;
         state.startedAt = performance.now();
         setSecondaryModesPending(true);
+        if(typeof goChuStartupMark === "function") goChuStartupMark("postStartup:start");
 
-        if(typeof goChuStartupMark === "function"){
-            goChuStartupMark("postStartup:start");
-        }
-
-        /* CSS có thể tải song song. */
         const stylePromise = Promise.all(POST_STYLES.map(loadStyle));
-
-        /*
-         * Append toàn bộ script ngay để browser download song song.
-         * async=false giữ execution theo insertion order cho classic dynamic scripts.
-         */
-        const scriptPromises = POST_SCRIPTS.map(appendOrderedScript);
-        const scriptPromise = Promise.all(scriptPromises);
+        const scriptPromise = Promise.all(POST_SCRIPTS.map(appendOrderedScript));
 
         Promise.all([stylePromise, scriptPromise])
             .then(([styleResults, scriptResults]) => finishPostStartup(styleResults, scriptResults))
@@ -157,10 +177,6 @@
     }
 
     function scheduleAfterFirstPaint(){
-        /*
-         * RAF #1 chạy trước first paint và chỉ schedule RAF #2.
-         * Browser có cơ hội paint Easy core giữa hai callback.
-         */
         requestAnimationFrame(() => {
             requestAnimationFrame(startPostStartup);
         });
@@ -171,8 +187,10 @@
             ...state,
             scriptCount: POST_SCRIPTS.length,
             styleCount: POST_STYLES.length,
-            pendingScripts: Math.max(0, POST_SCRIPTS.length - state.loadedScripts - state.failedScripts.length),
-            pendingStyles: Math.max(0, POST_STYLES.length - state.loadedStyles - state.failedStyles.length)
+            pendingScripts: Math.max(0, POST_SCRIPTS.length - state.loadedScripts),
+            pendingStyles: Math.max(0, POST_STYLES.length - state.loadedStyles),
+            memoryBehaviorReady: Boolean(window.GO_CHU_MEMORY_BEHAVIOR_READY),
+            memoryTopicBridgeReady: Boolean(window.GO_CHU_MEMORY_TOPIC_BRIDGE_READY)
         };
     };
 
