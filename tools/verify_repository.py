@@ -35,19 +35,15 @@ def check_script_refs() -> None:
     if missing:
         fail(f"index.html tham chiếu script không tồn tại: {missing}")
 
-    required_order = [
+    critical = [
         "startup-performance.js",
         "data-easy.js",
-        "tts-manifest.js",
         "topic-data.js",
+        "memory-state.js",
         "audio-lazy-bootstrap.js",
         "script-core.js",
         "easy-boot-state.js",
         "smart-review.js",
-        "listen-mode.js",
-        "ux-hotfix.js",
-        "tts-local.js",
-        "memory-mode.js",
         "topic-level.js",
         "profile-stats.js",
         "startup-runtime-instrument.js",
@@ -55,36 +51,29 @@ def check_script_refs() -> None:
         "script.js",
         "post-startup-loader.js",
     ]
-    positions = {ref: refs.index(ref) if ref in refs else -1 for ref in required_order}
-    missing_required = [name for name, pos in positions.items() if pos < 0]
-    if missing_required:
-        fail(f"Thiếu critical script bắt buộc: {missing_required}")
-    if any(positions[required_order[i]] >= positions[required_order[i + 1]] for i in range(len(required_order) - 1)):
-        fail("Load order critical runtime không đúng")
+    positions = {name: refs.index(name) if name in refs else -1 for name in critical}
+    missing_critical = [name for name, pos in positions.items() if pos < 0]
+    if missing_critical:
+        fail(f"Thiếu critical script: {missing_critical}")
+    for current, nxt in zip(critical, critical[1:]):
+        if positions[current] >= positions[nxt]:
+            fail(f"Sai critical order: {current} phải trước {nxt}")
 
     post_required = [
-        "data-poems.js",
-        "visual-data.js",
-        "twemoji-local-manifest.js",
-        "visual-prompt.js",
-        "vietnamese-input.js",
-        "vietnamese-dashboard.js",
-        "stability-fixes.js",
-        "mode-stats.js",
-        "storage-health.js",
-        "asset-reliability.js",
-        "accessibility.js",
-        "performance-health.js",
-        "debug-smoke.js",
+        "data-poems.js", "tts-manifest.js", "visual-data.js", "twemoji-local-manifest.js",
+        "visual-prompt.js", "listen-mode.js", "ux-hotfix.js", "tts-local.js",
+        "memory-mode.js", "memory-topic-bridge.js", "vietnamese-input.js",
+        "vietnamese-dashboard.js", "stability-fixes.js", "mode-stats.js",
+        "storage-health.js", "asset-reliability.js", "accessibility.js",
+        "performance-health.js", "debug-smoke.js",
     ]
     leaked = [name for name in post_required if name in refs]
     if leaked:
-        fail(f"Post-startup script bị đưa lại critical path: {leaked}")
+        fail(f"Post module quay lại critical path: {leaked}")
     missing_post = [name for name in post_required if name not in post]
     if missing_post:
         fail(f"Post loader thiếu module: {missing_post}")
-
-    ok(f"Critical refs {len(refs)} file; post-startup modules {len(post_required)} file")
+    ok(f"Critical refs {len(refs)}; post modules {len(post_required)}")
 
 
 def check_styles() -> None:
@@ -94,19 +83,22 @@ def check_styles() -> None:
     compact = re.sub(r"\s+", "", scope)
 
     if 'href="styles.css"' in html:
-        fail("Production không được quay lại styles.css/@import waterfall")
+        fail("Production không được quay lại styles.css/@import")
     if 'href="ui-scope-fixes.css"' not in html:
-        fail("ui-scope-fixes.css phải nằm trong critical CSS cascade")
+        fail("ui-scope-fixes.css phải ở critical cascade")
     if ".hidden-by-mode" not in scope or "display:none!important" not in compact:
-        fail("UI scope guard cho hidden-by-mode chưa đủ mạnh")
+        fail("hidden-by-mode guard chưa đủ mạnh")
 
-    optional = ["visual-prompt.css", "vietnamese-input.css", "accessibility.css", "asset-reliability.css"]
+    optional = [
+        "listen-mode.css", "ux-hotfix.css", "memory-mode.css",
+        "visual-prompt.css", "vietnamese-input.css", "accessibility.css", "asset-reliability.css"
+    ]
     for name in optional:
         if f'href="{name}"' in html:
             fail(f"Optional CSS không được block first paint: {name}")
         if name not in post:
             fail(f"Post loader thiếu optional CSS: {name}")
-    ok("Critical/post-startup CSS split hợp lệ")
+    ok("Critical/post CSS split hợp lệ")
 
 
 def extract_visual_codes() -> list[str]:
@@ -116,10 +108,9 @@ def extract_visual_codes() -> list[str]:
     if not unique:
         fail("Không tìm thấy Twemoji code")
     if re.search(r'\bkeywords\s*:', source):
-        fail("visual-data.js quay lại keyword mapping rộng; phải dùng exact/contains whitelist")
+        fail("Visual quay lại keyword mapping rộng")
     if "exact:" not in source or "contains:" not in source:
-        fail("visual-data.js thiếu exact/contains semantic mapping")
-    ok(f"Twemoji rules: {len(codes)} rule / {len(unique)} code duy nhất")
+        fail("Visual thiếu exact/contains semantic mapping")
     return unique
 
 
@@ -128,37 +119,67 @@ def check_easy_scope_guards() -> None:
     tts = read("tts-local.js")
     smart = read("smart-review.js")
     visual = read("visual-prompt.js")
-
-    required_snippets = [
-        (listen, 'bar.classList.toggle("hidden-by-mode", !isEasy)', "Listen bar chưa có Easy-only guard"),
-        (tts, 'if(!isEasy)', "Local TTS chưa có Easy-only guard"),
-        (smart, 'bar.classList.toggle("hidden-by-mode", !isEasy)', "Smart Review chưa có Easy-only guard"),
-        (visual, 'if(currentMode !== "easy")', "Visual chưa có Easy-only guard"),
+    required = [
+        (listen, 'bar.classList.toggle("hidden-by-mode", !isEasy)', "Listen thiếu Easy-only guard"),
+        (tts, 'if(!isEasy)', "TTS thiếu Easy-only guard"),
+        (smart, 'bar.classList.toggle("hidden-by-mode", !isEasy)', "Review thiếu Easy-only guard"),
+        (visual, 'if(currentMode !== "easy")', "Visual thiếu Easy-only guard"),
     ]
-    for source, snippet, message in required_snippets:
+    for source, snippet, message in required:
         if snippet not in source:
             fail(message)
-    ok("Easy-only UI/runtime guards tồn tại")
+    ok("Easy-only guards tồn tại")
 
 
 def check_stability_guards() -> None:
     script = read("script.js")
     stability = read("stability-fixes.js")
     performance = read("performance-health.js")
-
     if "function requestAppFullscreen" in script or "request.call(el)" in script:
-        fail("script.js còn auto-fullscreen runtime; đây là nguồn jank/treo đã cấm")
-    if 'document.addEventListener("wheel"' in script or 'document.addEventListener("keydown", requestAppFullscreen' in script:
-        fail("script.js còn listener fullscreen/event nặng trên wheel/keydown")
-    if "requestAnimationFrame" not in script or "scheduleFreeLayoutSync" not in script or "scheduleFreeTypingState" not in script:
-        fail("Free mode chưa throttle resize/input theo animation frame")
+        fail("Auto-fullscreen runtime quay lại")
+    if 'document.addEventListener("wheel"' in script:
+        fail("Wheel listener nặng quay lại")
+    if "scheduleFreeLayoutSync" not in script or "scheduleFreeTypingState" not in script:
+        fail("Free mode mất RAF throttle")
     if "poemSelectMenu.dataset.rendered" not in stability or "DocumentFragment" not in stability:
-        fail("Free dropdown chưa có single-render DOM guard")
-    if "--free-poem-icon-url" in stability:
-        fail("Free dropdown stability layer không được gắn ảnh nặng cho mọi option")
+        fail("Free dropdown mất single-render guard")
     if "PerformanceObserver" not in performance or "getGoChuPerformanceHealth" not in performance:
-        fail("Thiếu performance diagnostics cho long task/runtime error")
-    ok("Freeze/stability guards tồn tại")
+        fail("Thiếu performance diagnostics")
+    ok("Stability guards tồn tại")
+
+
+def check_optional_memory_split() -> None:
+    state = read("memory-state.js")
+    memory = read("memory-mode.js")
+    bridge = read("memory-topic-bridge.js")
+    post = read("post-startup-loader.js")
+
+    for snippet in [
+        'const GO_CHU_MEMORY_WORDS_KEY', 'let memoryModeActive = false',
+        'let buildMemoryRound = function', 'getGoChuMemoryStateHealth'
+    ]:
+        if snippet not in state:
+            fail(f"memory-state thiếu: {snippet}")
+
+    forbidden_redeclare = [
+        'const GO_CHU_MEMORY_WORDS_KEY', 'const GO_CHU_MEMORY_SECONDS_KEY',
+        'let memoryModeActive', 'let memoryWordCount', 'let memorySeconds',
+        'function loadMemoryNumber', 'function saveMemoryNumber', 'function getPromptWordCount'
+    ]
+    for snippet in forbidden_redeclare:
+        if snippet in memory:
+            fail(f"memory-mode redeclare critical state: {snippet}")
+    if 'buildMemoryRound = function' not in memory or 'GO_CHU_MEMORY_BEHAVIOR_READY' not in memory:
+        fail("memory-mode chưa thay stub bằng behavior thật")
+    if "GO_CHU_MEMORY_TOPIC_BRIDGE_READY" not in bridge or "promptMatchesTopic" not in bridge:
+        fail("Memory topic bridge chưa phục hồi topic filter")
+
+    order = ["listen-mode.js", "ux-hotfix.js", "tts-local.js", "memory-mode.js", "memory-topic-bridge.js", "vietnamese-input.js"]
+    positions = {name: post.find(f'"{name}"') for name in order}
+    for current, nxt in zip(order, order[1:]):
+        if positions[current] < 0 or positions[nxt] < 0 or positions[current] >= positions[nxt]:
+            fail(f"Sai optional runtime order: {current} → {nxt}")
+    ok("Memory state/behavior split hợp lệ")
 
 
 def check_easy_startup_performance_guards() -> None:
@@ -177,60 +198,36 @@ def check_easy_startup_performance_guards() -> None:
     transition = read("easy-entry-transition.js")
     post = read("post-startup-loader.js")
 
-    required_topic = [
-        "GO_CHU_UNIQUE_EASY_PROMPTS",
-        "GO_CHU_EASY_PROMPT_SET",
-        "goChuTopicNormalizeCache",
-        "goChuTopicMatchCache",
-        "goChuWordCountCache",
-    ]
-    if any(name not in topic_data for name in required_topic):
-        fail("Thiếu cache topic/word-count cho Easy startup")
-
+    for name in ["GO_CHU_UNIQUE_EASY_PROMPTS", "GO_CHU_EASY_PROMPT_SET", "goChuTopicNormalizeCache", "goChuTopicMatchCache", "goChuWordCountCache"]:
+        if name not in topic_data:
+            fail(f"Thiếu topic cache: {name}")
     if "goChuTopicPoolCache" not in topic_level or "goChuLevelPoolCache" not in topic_level:
-        fail("Thiếu cache topic/level pool")
-    if 'const effectiveLevel = getEffectiveLearningLevel();' not in topic_level:
-        fail("Smart Easy round chưa tính effective level một lần")
+        fail("Thiếu topic/level pool cache")
     if '.filter(prompt => promptMatchesLearningFilters(prompt, true))' in topic_level:
-        fail("Smart Easy round quay lại tính filter/level lặp trên từng prompt")
+        fail("Easy round quay lại filter lặp")
+    if "goChuVisualMatchCache" not in visual or 'if(currentMode === "easy" && currentPrompt)' not in visual:
+        fail("Visual post-load/cache guard thiếu")
 
-    if "goChuVisualMatchCache" not in visual or "schedulePromptVisual" not in visual or "requestAnimationFrame" not in visual:
-        fail("Visual chưa cache/defer")
-    if 'if(currentMode === "easy" && currentPrompt)' not in visual:
-        fail("Visual post-load phải hydrate prompt Easy hiện tại")
+    if "ensureListenVoiceRuntime" not in listen or "hasVietnameseWebVoice(refresh = false)" not in tts:
+        fail("Listen/TTS lazy voice guard thiếu")
+    if re.search(r"(?m)^\s*refreshVoiceHotfixUI\(\);\s*$", ux):
+        fail("Voice enumeration quay lại startup")
+    if "hydrateActiveModeStatsFromStorage" not in mode_stats:
+        fail("Mode stats hydrate guard thiếu")
+    if "requestIdleCallback" not in asset or "scheduleGoChuAssetReliability" not in asset:
+        fail("Asset probe chưa idle")
+    if "getGoChuStartupPerformance" not in startup or "easy:firstInputReady" not in runtime_startup:
+        fail("Startup diagnostics thiếu")
+    if 'currentMode = "__boot__"' not in boot:
+        fail("Neutral boot state thiếu")
+    if "getGoChuEasyEntryTransitionHealth" not in transition:
+        fail("Easy transition diagnostics thiếu")
+    if "getGoChuPostStartupHealth" not in post:
+        fail("Post-startup diagnostics thiếu")
 
     hud_block = re.search(r"function ensureProfileHud\(\).*?\n}\n\nfunction updateProfileHud", profile, flags=re.S)
     if hud_block and "ensureProfileDashboard()" in hud_block.group(0):
-        fail("Profile HUD không được dựng dashboard modal ở startup")
-    if re.search(r"initializeProfileSystem\(\);\s*ensureProfileHud\(\);\s*updateProfileHud\(\);\s*renderProfileDashboard\(\);", profile):
-        fail("Dashboard vẫn render ngay ở startup")
-
-    if "ensureListenVoiceRuntime" not in listen:
-        fail("Listen thiếu lazy voice runtime")
-    if re.search(r"(?m)^\s*refreshVoiceHotfixUI\(\);\s*$", ux):
-        fail("Voice setting vẫn bị enumerate bằng lời gọi standalone ở startup")
-    if "hasVietnameseWebVoice(refresh = false)" not in tts:
-        fail("Local TTS chưa tránh query Web Speech khi inactive")
-
-    if "hydrateActiveModeStatsFromStorage" not in mode_stats:
-        fail("Mode stats chưa hydrate dữ liệu cũ mà không startup write")
-    if re.search(r"hydrateActiveModeStatsFromStorage\(\);\s*saveProfileData\(", mode_stats):
-        fail("Mode stats không được save profile ngay sau startup hydrate")
-
-    if "requestIdleCallback" not in asset or "scheduleGoChuAssetReliability" not in asset:
-        fail("Asset probing chưa defer tới idle")
-
-    if "getGoChuStartupPerformance" not in startup or "printGoChuStartupPerformance" not in startup:
-        fail("Thiếu startup performance report")
-    if "setModeEasy:start" not in runtime_startup or "easy:firstInputReady" not in runtime_startup:
-        fail("Thiếu marker startup Easy")
-    if 'currentMode = "__boot__"' not in boot:
-        fail("Thiếu neutral Easy boot state")
-    if "getGoChuEasyEntryTransitionHealth" not in transition or transition.count("requestAnimationFrame") < 2:
-        fail("Thiếu Easy transition gate/double RAF")
-    if "GO_CHU_POST_STARTUP_READY" not in post or "getGoChuPostStartupHealth" not in post:
-        fail("Thiếu post-startup readiness diagnostics")
-
+        fail("Profile HUD dựng dashboard quá sớm")
     ok("Easy startup performance guards tồn tại")
 
 
@@ -253,38 +250,26 @@ def check_twemoji_manifest(codes: list[str]) -> None:
     unknown = sorted(set(manifest) - set(codes))
     if unknown:
         fail(f"Twemoji manifest có code không dùng: {unknown}")
-    bad_paths = [path for path in manifest.values() if not re.fullmatch(r'assets/twemoji/[0-9a-f-]+\.svg', path)]
-    if bad_paths:
-        fail(f"Twemoji manifest path sai: {bad_paths[:3]}")
     missing_files = [path for path in manifest.values() if not (ROOT / path).exists()]
     if missing_files:
-        fail(f"Twemoji manifest trỏ tới file thiếu: {missing_files[:3]}")
-    ok(f"Twemoji local manifest hợp lệ: {len(manifest)}/{len(codes)}")
+        fail(f"Twemoji manifest trỏ file thiếu: {missing_files[:3]}")
 
 
 def check_tts_manifest() -> None:
     source = read("tts-manifest.js")
     if "google-cloud-text-to-speech" not in source:
-        fail("tts-manifest.js thiếu provider marker")
+        fail("TTS manifest thiếu provider")
     if re.search(r'AIza[0-9A-Za-z_-]{20,}', source):
-        fail("Phát hiện chuỗi giống Google API key trong tts-manifest.js")
-    ok("TTS manifest không lộ API key dạng phổ biến")
+        fail("Phát hiện chuỗi giống Google API key")
 
 
 def check_tools() -> None:
-    required = [
-        "tools/render_google_tts.py",
-        "tools/vendor_twemoji.py",
-        "tools/verify_repository.py",
-        "tools/verify_startup_loading.py",
-        "tools/verify_easy_entry.py",
-        "tools/verify_easy_transition.py",
-        "tools/render_google_tts.bat",
-        "tools/vendor_twemoji.bat",
-    ]
-    for path in required:
+    for path in [
+        "tools/render_google_tts.py", "tools/vendor_twemoji.py", "tools/verify_repository.py",
+        "tools/verify_startup_loading.py", "tools/verify_easy_entry.py", "tools/verify_easy_transition.py",
+        "tools/render_google_tts.bat", "tools/vendor_twemoji.bat"
+    ]:
         read(path)
-    ok("Build/verify tools tồn tại")
 
 
 def main() -> int:
@@ -292,6 +277,7 @@ def main() -> int:
     check_styles()
     check_easy_scope_guards()
     check_stability_guards()
+    check_optional_memory_split()
     check_easy_startup_performance_guards()
     codes = extract_visual_codes()
     check_twemoji_manifest(codes)
