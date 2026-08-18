@@ -36,20 +36,10 @@ def check_script_refs() -> None:
         fail(f"index.html tham chiếu script không tồn tại: {missing}")
 
     critical = [
-        "startup-performance.js",
-        "data-easy.js",
-        "topic-data.js",
-        "memory-state.js",
-        "audio-lazy-bootstrap.js",
-        "script-core.js",
-        "easy-boot-state.js",
-        "smart-review.js",
-        "topic-level.js",
-        "profile-stats.js",
-        "startup-runtime-instrument.js",
-        "easy-entry-transition.js",
-        "script.js",
-        "post-startup-loader.js",
+        "startup-performance.js", "data-easy.js", "topic-data.js", "memory-state.js",
+        "audio-lazy-bootstrap.js", "script-core.js", "easy-boot-state.js", "smart-review.js",
+        "topic-level.js", "profile-stats.js", "startup-runtime-instrument.js",
+        "easy-entry-transition.js", "easy-start.js", "post-startup-loader.js",
     ]
     positions = {name: refs.index(name) if name in refs else -1 for name in critical}
     missing_critical = [name for name, pos in positions.items() if pos < 0]
@@ -59,13 +49,15 @@ def check_script_refs() -> None:
         if positions[current] >= positions[nxt]:
             fail(f"Sai critical order: {current} phải trước {nxt}")
 
+    if "script.js" in refs:
+        fail("script.js Free/Settings không được nằm critical path sau 11G")
+
     post_required = [
-        "data-poems.js", "tts-manifest.js", "visual-data.js", "twemoji-local-manifest.js",
-        "visual-prompt.js", "listen-mode.js", "ux-hotfix.js", "tts-local.js",
-        "memory-mode.js", "memory-topic-bridge.js", "vietnamese-input.js",
-        "vietnamese-dashboard.js", "stability-fixes.js", "mode-stats.js",
-        "storage-health.js", "asset-reliability.js", "accessibility.js",
-        "performance-health.js", "debug-smoke.js",
+        "script.js", "data-poems.js", "tts-manifest.js", "visual-data.js",
+        "twemoji-local-manifest.js", "visual-prompt.js", "listen-mode.js", "ux-hotfix.js",
+        "tts-local.js", "memory-mode.js", "memory-topic-bridge.js", "vietnamese-input.js",
+        "vietnamese-dashboard.js", "stability-fixes.js", "mode-stats.js", "storage-health.js",
+        "asset-reliability.js", "accessibility.js", "performance-health.js", "debug-smoke.js",
     ]
     leaked = [name for name in post_required if name in refs]
     if leaked:
@@ -90,8 +82,8 @@ def check_styles() -> None:
         fail("hidden-by-mode guard chưa đủ mạnh")
 
     optional = [
-        "listen-mode.css", "ux-hotfix.css", "memory-mode.css",
-        "visual-prompt.css", "vietnamese-input.css", "accessibility.css", "asset-reliability.css"
+        "listen-mode.css", "ux-hotfix.css", "memory-mode.css", "visual-prompt.css",
+        "vietnamese-input.css", "accessibility.css", "asset-reliability.css"
     ]
     for name in optional:
         if f'href="{name}"' in html:
@@ -154,19 +146,15 @@ def check_optional_memory_split() -> None:
     bridge = read("memory-topic-bridge.js")
     post = read("post-startup-loader.js")
 
-    for snippet in [
-        'const GO_CHU_MEMORY_WORDS_KEY', 'let memoryModeActive = false',
-        'let buildMemoryRound = function', 'getGoChuMemoryStateHealth'
-    ]:
+    for snippet in ['const GO_CHU_MEMORY_WORDS_KEY', 'let memoryModeActive = false', 'let buildMemoryRound = function', 'getGoChuMemoryStateHealth']:
         if snippet not in state:
             fail(f"memory-state thiếu: {snippet}")
 
-    forbidden_redeclare = [
+    for snippet in [
         'const GO_CHU_MEMORY_WORDS_KEY', 'const GO_CHU_MEMORY_SECONDS_KEY',
         'let memoryModeActive', 'let memoryWordCount', 'let memorySeconds',
         'function loadMemoryNumber', 'function saveMemoryNumber', 'function getPromptWordCount'
-    ]
-    for snippet in forbidden_redeclare:
+    ]:
         if snippet in memory:
             fail(f"memory-mode redeclare critical state: {snippet}")
     if 'buildMemoryRound = function' not in memory or 'GO_CHU_MEMORY_BEHAVIOR_READY' not in memory:
@@ -180,6 +168,22 @@ def check_optional_memory_split() -> None:
         if positions[current] < 0 or positions[nxt] < 0 or positions[current] >= positions[nxt]:
             fail(f"Sai optional runtime order: {current} → {nxt}")
     ok("Memory state/behavior split hợp lệ")
+
+
+def check_easy_bootstrap_split() -> None:
+    easy_start = read("easy-start.js")
+    legacy = read("script.js")
+    post = read("post-startup-loader.js")
+
+    for snippet in ['startStudyTimer();', 'setMode("easy");', 'GO_CHU_EASY_CORE_STARTED', 'GO_CHU_EXECUTING_POST_SCRIPT === "script.js"']:
+        if snippet not in easy_start:
+            fail(f"easy-start thiếu: {snippet}")
+    if 'setMode("easy")' not in legacy:
+        fail("script.js legacy startup marker không còn để verify suppress guard")
+    for snippet in ['"script.js"', 'GO_CHU_EXECUTING_POST_SCRIPT = "script.js"', 'legacyEasySuppressed', 'appUiLoaded']:
+        if snippet not in post:
+            fail(f"post loader thiếu Easy bootstrap guard: {snippet}")
+    ok("Easy bootstrap đã tách khỏi script Free/Settings")
 
 
 def check_easy_startup_performance_guards() -> None:
@@ -207,7 +211,6 @@ def check_easy_startup_performance_guards() -> None:
         fail("Easy round quay lại filter lặp")
     if "goChuVisualMatchCache" not in visual or 'if(currentMode === "easy" && currentPrompt)' not in visual:
         fail("Visual post-load/cache guard thiếu")
-
     if "ensureListenVoiceRuntime" not in listen or "hasVietnameseWebVoice(refresh = false)" not in tts:
         fail("Listen/TTS lazy voice guard thiếu")
     if re.search(r"(?m)^\s*refreshVoiceHotfixUI\(\);\s*$", ux):
@@ -267,7 +270,7 @@ def check_tools() -> None:
     for path in [
         "tools/render_google_tts.py", "tools/vendor_twemoji.py", "tools/verify_repository.py",
         "tools/verify_startup_loading.py", "tools/verify_easy_entry.py", "tools/verify_easy_transition.py",
-        "tools/render_google_tts.bat", "tools/vendor_twemoji.bat"
+        "tools/verify_optional_runtime.py", "tools/render_google_tts.bat", "tools/vendor_twemoji.bat"
     ]:
         read(path)
 
@@ -278,6 +281,7 @@ def main() -> int:
     check_easy_scope_guards()
     check_stability_guards()
     check_optional_memory_split()
+    check_easy_bootstrap_split()
     check_easy_startup_performance_guards()
     codes = extract_visual_codes()
     check_twemoji_manifest(codes)

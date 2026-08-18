@@ -30,6 +30,7 @@ def main() -> int:
     html = read("index.html")
     lazy_audio = read("audio-lazy-bootstrap.js")
     post_loader = read("post-startup-loader.js")
+    easy_start = read("easy-start.js")
 
     if 'href="styles.css"' in html:
         fail("index.html quay lại styles.css/@import waterfall")
@@ -39,13 +40,8 @@ def main() -> int:
         fail(f"Critical CSS count bất thường: {len(css_links)} (kỳ vọng 5-7)")
 
     post_styles = [
-        "listen-mode.css",
-        "ux-hotfix.css",
-        "memory-mode.css",
-        "visual-prompt.css",
-        "vietnamese-input.css",
-        "accessibility.css",
-        "asset-reliability.css",
+        "listen-mode.css", "ux-hotfix.css", "memory-mode.css", "visual-prompt.css",
+        "vietnamese-input.css", "accessibility.css", "asset-reliability.css",
     ]
     leaked_styles = [name for name in post_styles if name in css_links]
     if leaked_styles:
@@ -80,7 +76,7 @@ def main() -> int:
         "profile-stats.js",
         "startup-runtime-instrument.js",
         "easy-entry-transition.js",
-        "script.js",
+        "easy-start.js",
         "post-startup-loader.js",
     ]
     positions = {name: refs.index(name) if name in refs else -1 for name in critical_order}
@@ -91,39 +87,32 @@ def main() -> int:
         if positions[current] >= positions[nxt]:
             fail(f"Sai critical load order: {current} phải trước {nxt}")
 
+    if "script.js" in refs:
+        fail("script.js Free/Settings không được quay lại critical path sau 11G")
+    if 'startStudyTimer();' not in easy_start or 'setMode("easy");' not in easy_start:
+        fail("easy-start.js thiếu startup Easy chính thức")
+
     post_scripts = [
-        "data-poems.js",
-        "tts-manifest.js",
-        "visual-data.js",
-        "twemoji-local-manifest.js",
-        "visual-prompt.js",
-        "listen-mode.js",
-        "ux-hotfix.js",
-        "tts-local.js",
-        "memory-mode.js",
-        "memory-topic-bridge.js",
-        "vietnamese-input.js",
-        "vietnamese-dashboard.js",
-        "stability-fixes.js",
-        "mode-stats.js",
-        "storage-health.js",
-        "asset-reliability.js",
-        "accessibility.js",
-        "performance-health.js",
-        "debug-smoke.js",
+        "script.js", "data-poems.js", "tts-manifest.js", "visual-data.js",
+        "twemoji-local-manifest.js", "visual-prompt.js", "listen-mode.js",
+        "ux-hotfix.js", "tts-local.js", "memory-mode.js", "memory-topic-bridge.js",
+        "vietnamese-input.js", "vietnamese-dashboard.js", "stability-fixes.js",
+        "mode-stats.js", "storage-health.js", "asset-reliability.js",
+        "accessibility.js", "performance-health.js", "debug-smoke.js",
     ]
     leaked_scripts = [name for name in post_scripts if name in refs]
     if leaked_scripts:
-        fail(f"Optional script quay lại critical path: {leaked_scripts}")
+        fail(f"Post script quay lại critical path: {leaked_scripts}")
     for name in post_scripts:
         if name not in post_loader:
             fail(f"Post loader thiếu script: {name}")
 
-    if len(refs) > 16:
+    if len(refs) > 15:
         fail(f"Critical script count tăng trở lại: {len(refs)}")
     ok(f"Critical JS: {len(refs)} tag; {len(post_scripts)} module post-startup")
 
     post_order = [
+        "script.js",
         "tts-manifest.js",
         "listen-mode.js",
         "ux-hotfix.js",
@@ -131,6 +120,8 @@ def main() -> int:
         "memory-mode.js",
         "memory-topic-bridge.js",
         "vietnamese-input.js",
+        "stability-fixes.js",
+        "mode-stats.js",
     ]
     post_positions = {name: post_loader.find(f'"{name}"') for name in post_order}
     if any(pos < 0 for pos in post_positions.values()):
@@ -145,17 +136,17 @@ def main() -> int:
         fail("Dynamic post scripts phải giữ execution order bằng async=false")
     if "GO_CHU_POST_STARTUP_READY" not in post_loader or "getGoChuPostStartupHealth" not in post_loader:
         fail("Post loader thiếu readiness/health API")
-    if "setSecondaryModesPending(true)" not in post_loader:
-        fail("Hard/Free phải bị khóa trong lúc post modules chưa sẵn sàng")
-    ok("Post-startup loader có paint gate + runtime dependency order")
+    if "setPostUiPending(true)" not in post_loader:
+        fail("Hard/Free/Settings phải bị khóa trong post warm-up")
+    if 'GO_CHU_EXECUTING_POST_SCRIPT = "script.js"' not in post_loader:
+        fail("Post loader thiếu marker thực thi script.js cho legacy Easy suppression")
+    if "legacyEasySuppressed" not in post_loader:
+        fail("Post runtime validation thiếu legacy Easy suppression check")
+    ok("Post-startup loader có Easy bootstrap split + runtime dependency guard")
 
     required_audio = [
-        'audio.preload = "none"',
-        "userActivated",
-        "audio.play = function()",
-        "audio.src = deferredSrc",
-        "pointerdown",
-        "keydown",
+        'audio.preload = "none"', "userActivated", "audio.play = function()",
+        "audio.src = deferredSrc", "pointerdown", "keydown",
     ]
     if any(item not in lazy_audio for item in required_audio):
         fail("Lazy audio bootstrap thiếu guard cần thiết")

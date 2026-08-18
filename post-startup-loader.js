@@ -1,4 +1,4 @@
-/* ===== PHASE 9 ĐỢT 11E/11F - POST STARTUP FEATURE LOADER =====
+/* ===== PHASE 9 ĐỢT 11E/11F/11G - POST STARTUP FEATURE LOADER =====
  * Easy core activate trước; feature không cần cho first usable frame tải sau double RAF.
  */
 (function(){
@@ -13,6 +13,7 @@
     ]);
 
     const POST_SCRIPTS = Object.freeze([
+        "script.js",
         "data-poems.js",
         "tts-manifest.js",
         "visual-data.js",
@@ -46,25 +47,34 @@
         loadedStyles: 0,
         failedStyles: [],
         runtimeValidated: false,
-        runtimeChecks: {}
+        runtimeChecks: {},
+        appUiLoaded: false
     };
 
     window.GO_CHU_POST_STARTUP_STYLES = POST_STYLES;
     window.GO_CHU_POST_STARTUP_SCRIPTS = POST_SCRIPTS;
     window.GO_CHU_POST_STARTUP_READY = false;
+    window.GO_CHU_EXECUTING_POST_SCRIPT = "";
 
-    function getSecondaryModeButtons(){
-        return Array.from(document.querySelectorAll('.mode-btn[data-mode="hard"], .mode-btn[data-mode="free"]'));
+    function getPendingControls(){
+        return [
+            ...document.querySelectorAll('.mode-btn[data-mode="hard"], .mode-btn[data-mode="free"]'),
+            document.getElementById("settingsToggleBtn")
+        ].filter(Boolean);
     }
 
-    function setSecondaryModesPending(pending){
-        getSecondaryModeButtons().forEach(button => {
-            button.disabled = Boolean(pending);
-            button.setAttribute("aria-busy", pending ? "true" : "false");
+    function setPostUiPending(pending){
+        getPendingControls().forEach(control => {
+            control.disabled = Boolean(pending);
+            control.setAttribute("aria-busy", pending ? "true" : "false");
             if(pending){
-                button.title = "Đang nạp tính năng bổ sung…";
-            }else if(button.title === "Đang nạp tính năng bổ sung…"){
-                button.removeAttribute("title");
+                control.dataset.postStartupTitle = control.title || "";
+                control.title = "Đang nạp tính năng bổ sung…";
+            }else if(control.title === "Đang nạp tính năng bổ sung…"){
+                const previous = control.dataset.postStartupTitle || "";
+                if(previous) control.title = previous;
+                else control.removeAttribute("title");
+                delete control.dataset.postStartupTitle;
             }
         });
     }
@@ -101,8 +111,30 @@
         });
     }
 
+    async function loadPostScripts(){
+        const results = [];
+
+        /*
+         * script.js là source legacy lớn chứa Free/Settings handlers và 2 dòng
+         * startup cũ. Load riêng đầu tiên để easy-start.js có thể nhận diện đúng
+         * lời gọi setMode("easy") legacy và suppress nó mà không chặn click user.
+         */
+        window.GO_CHU_EXECUTING_POST_SCRIPT = "script.js";
+        const appUiResult = await appendOrderedScript("script.js");
+        window.GO_CHU_EXECUTING_POST_SCRIPT = "";
+        results.push(appUiResult);
+        state.appUiLoaded = Boolean(appUiResult.ok);
+
+        const remaining = POST_SCRIPTS.filter(src => src !== "script.js");
+        const restResults = await Promise.all(remaining.map(appendOrderedScript));
+        results.push(...restResults);
+        return results;
+    }
+
     function validatePostRuntime(){
         const checks = {
+            appUi: state.appUiLoaded && typeof showCenterToast === "function" && typeof submitFreeAnswer === "function",
+            legacyEasySuppressed: Boolean(window.GO_CHU_LEGACY_SCRIPT_EASY_SUPPRESSED),
             freeData: typeof freePoems !== "undefined" && Array.isArray(freePoems),
             listen: typeof setListenMode === "function" && typeof toggleListenMode === "function",
             tts: typeof getGoChuTtsHealth === "function",
@@ -137,7 +169,7 @@
         state.readyAt = performance.now();
         state.durationMs = state.readyAt - state.startedAt;
         window.GO_CHU_POST_STARTUP_READY = state.ready;
-        setSecondaryModesPending(!state.ready);
+        setPostUiPending(!state.ready);
 
         window.dispatchEvent(new CustomEvent("gochu:post-startup-ready", {
             detail: {
@@ -158,21 +190,22 @@
         if(state.loading || state.ready) return;
         state.loading = true;
         state.startedAt = performance.now();
-        setSecondaryModesPending(true);
+        setPostUiPending(true);
         if(typeof goChuStartupMark === "function") goChuStartupMark("postStartup:start");
 
         const stylePromise = Promise.all(POST_STYLES.map(loadStyle));
-        const scriptPromise = Promise.all(POST_SCRIPTS.map(appendOrderedScript));
+        const scriptPromise = loadPostScripts();
 
         Promise.all([stylePromise, scriptPromise])
             .then(([styleResults, scriptResults]) => finishPostStartup(styleResults, scriptResults))
             .catch(error => {
+                window.GO_CHU_EXECUTING_POST_SCRIPT = "";
                 state.loading = false;
                 state.ready = false;
                 state.readyAt = performance.now();
                 state.durationMs = state.readyAt - state.startedAt;
                 state.failedScripts.push(String(error?.message || error || "post-startup error"));
-                setSecondaryModesPending(true);
+                setPostUiPending(true);
             });
     }
 
@@ -190,10 +223,12 @@
             pendingScripts: Math.max(0, POST_SCRIPTS.length - state.loadedScripts),
             pendingStyles: Math.max(0, POST_STYLES.length - state.loadedStyles),
             memoryBehaviorReady: Boolean(window.GO_CHU_MEMORY_BEHAVIOR_READY),
-            memoryTopicBridgeReady: Boolean(window.GO_CHU_MEMORY_TOPIC_BRIDGE_READY)
+            memoryTopicBridgeReady: Boolean(window.GO_CHU_MEMORY_TOPIC_BRIDGE_READY),
+            easyCoreStarted: Boolean(window.GO_CHU_EASY_CORE_STARTED),
+            legacyScriptEasySuppressed: Boolean(window.GO_CHU_LEGACY_SCRIPT_EASY_SUPPRESSED)
         };
     };
 
-    setSecondaryModesPending(true);
+    setPostUiPending(true);
     scheduleAfterFirstPaint();
 })();

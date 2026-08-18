@@ -1,6 +1,6 @@
 # Performance QA — Easy startup
 
-Áp dụng sau Phase 9.11–11F và trước responsive UI redesign.
+Áp dụng sau Phase 9.11–11G và trước responsive UI redesign.
 
 ## 1. Cold load
 
@@ -16,6 +16,7 @@ Ngay khi prompt/input usable:
 
 ```js
 printGoChuStartupPerformance()
+getGoChuEasyBootstrapHealth()
 getGoChuBootState()
 getGoChuEasyEntryTransitionHealth()
 getGoChuPostStartupHealth()
@@ -34,7 +35,7 @@ postStartup:start sau first Easy paint
 
 Mobile không tự bật keyboard khi vừa vào Easy.
 
-## 2. Critical path 11F
+## 2. Critical path 11F/11G
 
 Cold-load Network phải cho thấy khoảng:
 
@@ -43,9 +44,19 @@ Cold-load Network phải cho thấy khoảng:
 6 blocking CSS
 ```
 
-Không được có trong critical HTML:
+**11G không nhất thiết giảm thêm request count.** Mục tiêu là giảm **critical parse/execute volume**: `script.js` lớn không còn trong HTML critical path.
+
+Critical phải có:
 
 ```text
+memory-state.js
+easy-start.js
+```
+
+Không được có:
+
+```text
+script.js
 tts-manifest.js
 listen-mode.js
 ux-hotfix.js
@@ -56,15 +67,44 @@ Vietnamese UI/dashboard
 mode-stats/storage/asset/a11y/debug
 ```
 
-Critical phải có:
+`easy-start.js` chỉ chịu trách nhiệm startup Easy và one-time legacy suppression; Free/Settings code không được quay lại file này.
 
-```text
-memory-state.js
+## 3. Easy bootstrap split 11G
+
+Ngay sau first Easy frame:
+
+```js
+getGoChuEasyBootstrapHealth()
 ```
 
-để Topic/Profile đọc Memory preferences mà không tải behavior Memory.
+Kỳ vọng:
 
-## 3. Post-startup 11E/11F
+```text
+coreStarted = true
+currentMode = easy
+```
+
+Sau post-startup ready:
+
+```text
+legacyScriptEasySuppressed = true
+```
+
+Ý nghĩa: `script.js` được post-load và hai dòng legacy cuối file không được phép re-run Easy transition lần hai.
+
+Trong warm-up:
+
+- Easy vẫn dùng được;
+- Hard + Free + Settings tạm disabled/`aria-busy=true`;
+- click Easy của user **không được** bị suppression guard chặn; guard chỉ chặn khi `GO_CHU_EXECUTING_POST_SCRIPT === "script.js"`.
+
+Startup report nên có:
+
+```text
+easy:bootstrap
+```
+
+## 4. Post-startup 11E–11G
 
 ```js
 getGoChuPostStartupHealth()
@@ -76,17 +116,21 @@ Sau khi hoàn tất kỳ vọng:
 ready = true
 runtimeValidated = true
 failedScripts = []
-loadedScripts = 19
+loadedScripts = 20
 loadedStyles = 7
 pendingScripts = 0
 pendingStyles = 0
+appUiLoaded = true
+legacyScriptEasySuppressed = true
 memoryBehaviorReady = true
 memoryTopicBridgeReady = true
 ```
 
-`runtimeChecks` phải đều `true`, đặc biệt:
+`runtimeChecks` phải đều true, gồm:
 
 ```text
+appUi
+legacyEasySuppressed
 freeData
 listen
 tts
@@ -98,9 +142,13 @@ storage
 performance
 ```
 
-Trong warm-up, Hard + Free phải disabled/`aria-busy=true`; Easy vẫn usable. Sau ready, Hard/Free tự mở.
+Sau ready:
 
-## 4. Memory state/behavior regression
+- Settings mở/đóng bình thường;
+- Free có event handlers và bài thơ;
+- Hard/Free tự mở.
+
+## 5. Memory state/behavior regression
 
 Trước post ready:
 
@@ -113,24 +161,14 @@ Kỳ vọng:
 ```text
 behaviorReady = false
 memoryModeActive = false
-memoryWordCount / memorySeconds có giá trị profile/default hợp lệ
+memoryWordCount / memorySeconds hợp lệ
 ```
 
-Sau post ready:
+Sau post ready: `behaviorReady = true`.
 
-```text
-behaviorReady = true
-```
+Bật Memory phải giữ topic filter, weak prompt, profile preference và Listen/Memory mutual exclusion.
 
-Bật Memory:
-
-- đúng số từ và số giây đã lưu trong profile;
-- topic filter vẫn đúng;
-- weak prompt vẫn được ưu tiên;
-- Listen đang bật thì phải tắt khi Memory bật và ngược lại;
-- rời Easy phải dừng timer/Memory.
-
-## 5. Boot/transition regression
+## 6. Boot/transition regression
 
 ```js
 getGoChuBootState()
@@ -148,7 +186,7 @@ pending jobs về false sau vài frame
 
 Mobile: `mobileAutofocusSkipped` tăng. Desktop: `desktopAutofocusDeferred` tăng.
 
-## 6. Cache/prompt loop
+## 7. Cache/prompt loop
 
 Sau post ready:
 
@@ -159,9 +197,9 @@ getGoChuSmartReviewHealth()
 getGoChuVisualHealth()
 ```
 
-Luyện 20–30 prompt Easy. Không được có long task lặp, Smart Review/Auto level phải đúng, `lastEasySourcePoolSize` phải là pool topic/level thực tế chứ không toàn `easyWords`.
+Luyện 20–30 prompt Easy. Không long task lặp, Smart Review/Auto level đúng, `lastEasySourcePoolSize` phải là pool topic/level thực tế.
 
-## 7. Mode regression
+## 8. Mode/Settings regression
 
 Sau `GO_CHU_POST_STARTUP_READY === true`, thử 10 vòng:
 
@@ -169,15 +207,18 @@ Sau `GO_CHU_POST_STARTUP_READY === true`, thử 10 vòng:
 Easy → Hard → Easy → Free → Easy
 ```
 
+và mở/đóng Settings nhiều lần.
+
 Kiểm tra:
 
-- Hard/Free stats ghi đúng và còn sau reload;
-- Free có đủ bài;
+- Hard/Free stats còn sau reload;
+- Free đủ bài;
+- Settings volume/case/music hoạt động;
 - visual/Vietnamese progress hoạt động;
-- Listen/TTS/Memory hoạt động và không lộ sang Hard/Free;
-- không tích timer/frame pending.
+- Listen/TTS/Memory không lộ Hard/Free;
+- không duplicate event handler hoặc duplicate Easy rebuild.
 
-## 8. Profile/dashboard
+## 9. Profile/dashboard
 
 Ngay startup:
 
@@ -187,9 +228,9 @@ Boolean(document.getElementById("profileDashboardOverlay"))
 
 Kỳ vọng `false`.
 
-Sau post ready mở 👤: dashboard đầy đủ Vietnamese/mode stats; Tab/Escape/focus trap vẫn đúng.
+Sau post ready mở 👤: dashboard đầy đủ Vietnamese/mode stats, Tab/Escape/focus trap đúng.
 
-## 9. Browser/device matrix
+## 10. Browser/device matrix
 
 ```text
 Chrome 1366×768
@@ -198,10 +239,11 @@ Chrome 1920×1080
 640×360 landscape
 ```
 
-Nếu vẫn lag, lấy cùng lúc:
+Nếu vẫn lag, lấy:
 
 ```js
 printGoChuStartupPerformance()
+getGoChuEasyBootstrapHealth()
 getGoChuBootState()
 getGoChuEasyEntryTransitionHealth()
 getGoChuPostStartupHealth()
@@ -210,10 +252,10 @@ getGoChuLearningPoolHealth()
 getGoChuSmartReviewHealth()
 ```
 
-Sau post ready lấy thêm:
+Sau post ready thêm:
 
 ```js
 printGoChuPerformanceHealth()
 ```
 
-Không bắt đầu Phase 9.12 nếu first Easy frame vẫn bị long task lớn hoặc input chưa usable nhanh.
+Không bắt đầu Phase 9.12 nếu first Easy frame vẫn có long task lớn hoặc input chưa usable nhanh.
