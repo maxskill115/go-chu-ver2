@@ -1,35 +1,10 @@
-/* ===== VER2 PHASE 5 - NHỚ RỒI GÕ ===== */
-const GO_CHU_MEMORY_WORDS_KEY = "goChuVer2.memoryWords.v1";
-const GO_CHU_MEMORY_SECONDS_KEY = "goChuVer2.memorySeconds.v1";
-
-let memoryModeActive = false;
-let memoryWordCount = loadMemoryNumber(GO_CHU_MEMORY_WORDS_KEY, 2, [2, 3, 4]);
-let memorySeconds = loadMemoryNumber(GO_CHU_MEMORY_SECONDS_KEY, 5, [3, 5, 7]);
+/* ===== VER2 PHASE 5 - NHỚ RỒI GÕ =====
+ * Phase 9 đợt 11F: state/preference đã chuyển sang memory-state.js.
+ * File này chỉ còn behavior/timer/UI và được post-load sau first Easy paint.
+ */
 let memoryTimer = null;
 let memoryTickTimer = null;
 let memoryRemaining = 0;
-
-function loadMemoryNumber(key, fallback, allowed){
-    try {
-        const value = Number(localStorage.getItem(key));
-        return allowed.includes(value) ? value : fallback;
-    } catch (error) {
-        return fallback;
-    }
-}
-
-function saveMemoryNumber(key, value){
-    try {
-        localStorage.setItem(key, String(value));
-    } catch (error) {}
-}
-
-function getPromptWordCount(prompt){
-    if(typeof getCachedPromptWordCount === "function"){
-        return getCachedPromptWordCount(prompt);
-    }
-    return String(prompt || "").trim().split(/\s+/).filter(Boolean).length;
-}
 
 function shuffleMemoryPrompts(items){
     const shuffled = [...items];
@@ -40,7 +15,8 @@ function shuffleMemoryPrompts(items){
     return shuffled;
 }
 
-function buildMemoryRound(previousPrompt = ""){
+/* Thay stub từ memory-state.js bằng implementation thật. */
+buildMemoryRound = function(previousPrompt = ""){
     const source = typeof GO_CHU_UNIQUE_EASY_PROMPTS !== "undefined"
         ? GO_CHU_UNIQUE_EASY_PROMPTS
         : [...new Set(easyWords)];
@@ -69,7 +45,7 @@ function buildMemoryRound(previousPrompt = ""){
     }
 
     return round;
-}
+};
 
 function clearMemoryTimers(){
     clearTimeout(memoryTimer);
@@ -361,5 +337,6 @@ checkNext = function(){
     }
 };
 
+window.GO_CHU_MEMORY_BEHAVIOR_READY = true;
 ensureMemoryModeBar();
 updateMemoryModeBar();
