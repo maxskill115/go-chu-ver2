@@ -1,21 +1,21 @@
 # Runtime architecture — go-chu-ver2
 
-Tài liệu này khóa **critical load order, post-startup dependency order, wrapper chain và invariant hiệu năng**.
+Tài liệu khóa **critical load order, post-startup dependency order, wrapper chain và invariant hiệu năng**.
 
 ## 1. Nguyên tắc
 
 - Không đổi thứ tự script nếu chưa audit dependency/wrapper.
-- Easy first usable frame không được chờ Free/Visual/Listen/TTS/Memory behavior/Stats/A11y/Debug.
+- Easy first usable frame không được chờ Free/Settings/Visual/Listen/TTS/Memory behavior/Stats/A11y/Debug.
 - Hard/Free không ghi vào `promptStats` adaptive Easy.
-- Wrapper phải gọi base đúng một lần trừ replacement đã ghi rõ.
-- Không thêm synchronous scan/network/storage/dashboard vào first Easy frame.
+- Wrapper gọi base đúng một lần trừ replacement đã ghi rõ.
+- Không thêm sync scan/network/storage/dashboard vào first Easy frame.
 - Google credential/API key không ở browser/runtime.
 
 ---
 
-## 2. Critical load order — Phase 9.11F
+## 2. Critical load order — Phase 9.11G
 
-Production `index.html` chỉ giữ khoảng **14 external script tag** ở critical path:
+Production `index.html` giữ khoảng **14 external script tag** ở critical path, nhưng code volume nhỏ hơn 11F vì `script.js` lớn đã ra hậu kỳ:
 
 1. `startup-performance.js`
 2. `data-easy.js`
@@ -29,17 +29,19 @@ Production `index.html` chỉ giữ khoảng **14 external script tag** ở crit
 10. `profile-stats.js`
 11. `startup-runtime-instrument.js`
 12. `easy-entry-transition.js`
-13. `script.js`
+13. `easy-start.js`
 14. `post-startup-loader.js`
 
-`script.js` cuối startup core gọi:
+`easy-start.js` là bootstrap chính thức:
 
 ```js
 startStudyTimer();
 setMode("easy");
 ```
 
-Critical CSS chỉ giữ:
+Nó còn cài one-time guard để suppress đúng lời gọi `setMode("easy")` legacy khi `script.js` được post-loader thực thi; guard **không được chặn click Easy của user**.
+
+Critical CSS:
 
 ```text
 styles-1.css
@@ -54,27 +56,53 @@ ui-scope-fixes.css
 
 ## 3. Post-startup load order
 
-`post-startup-loader.js` chờ double RAF để browser có first Easy paint, sau đó nạp classic scripts với `async=false` để giữ thứ tự:
+`post-startup-loader.js` chờ double RAF để browser có first Easy paint.
 
-1. `data-poems.js`
-2. `tts-manifest.js`
-3. `visual-data.js`
-4. `twemoji-local-manifest.js`
-5. `visual-prompt.js`
-6. `listen-mode.js`
-7. `ux-hotfix.js`
-8. `tts-local.js`
-9. `memory-mode.js`
-10. `memory-topic-bridge.js`
-11. `vietnamese-input.js`
-12. `vietnamese-dashboard.js`
-13. `stability-fixes.js`
-14. `mode-stats.js`
-15. `storage-health.js`
-16. `asset-reliability.js`
-17. `accessibility.js`
-18. `performance-health.js`
-19. `debug-smoke.js`
+### Bootstrap hậu kỳ
+
+`script.js` được tải riêng đầu tiên với marker:
+
+```js
+GO_CHU_EXECUTING_POST_SCRIPT = "script.js"
+```
+
+để `easy-start.js` suppress hai dòng startup legacy cuối file mà không suppress tương tác user.
+
+`script.js` chứa phần lớn:
+
+- Free mode;
+- Settings handlers;
+- global pointer/keyboard UI handlers;
+- Free resize/input throttles;
+- toast helper.
+
+Vì vậy nó không còn được phép ở critical HTML.
+
+### Feature hậu kỳ
+
+Sau `script.js`, post loader tải các module còn lại với dynamic classic script `async=false` để giữ dependency order:
+
+```text
+data-poems.js
+tts-manifest.js
+visual-data.js
+twemoji-local-manifest.js
+visual-prompt.js
+listen-mode.js
+ux-hotfix.js
+tts-local.js
+memory-mode.js
+memory-topic-bridge.js
+vietnamese-input.js
+vietnamese-dashboard.js
+stability-fixes.js
+mode-stats.js
+storage-health.js
+asset-reliability.js
+accessibility.js
+performance-health.js
+debug-smoke.js
+```
 
 Post CSS:
 
@@ -88,9 +116,11 @@ accessibility.css
 asset-reliability.css
 ```
 
-Hard + Free bị disabled/`aria-busy=true` trong post warm-up. Easy vẫn usable.
+Trong warm-up:
 
-Post loader chỉ mở mode phụ khi **network load + runtime validation** đều đạt.
+- Easy usable.
+- Hard + Free + Settings disabled/`aria-busy=true`.
+- Chỉ mở lại khi network load và runtime validation đều PASS.
 
 Debug:
 
@@ -101,24 +131,61 @@ GO_CHU_POST_STARTUP_READY
 
 ---
 
-## 4. Memory state/behavior split — 11F
+## 4. Easy bootstrap split — 11G
+
+### `easy-start.js` critical
+
+Chỉ làm startup Easy + guard legacy:
+
+```text
+startStudyTimer
+setMode(easy)
+set GO_CHU_EASY_CORE_STARTED
+install legacy script Easy suppression guard
+```
+
+Diagnostics:
+
+```js
+getGoChuEasyBootstrapHealth()
+```
+
+Expected sau post-ready:
+
+```text
+coreStarted = true
+legacyScriptEasySuppressed = true
+currentMode = easy
+```
+
+### `script.js` post
+
+Giữ source baseline cũ, kể cả hai dòng startup legacy cuối file. Không chỉnh hàng trăm dòng chỉ để chuyển ownership startup; `easy-start.js` + loader marker đảm bảo lời gọi Easy legacy không rebuild mode lần hai.
+
+Runtime validation yêu cầu:
+
+```text
+appUi = true
+legacyEasySuppressed = true
+```
+
+---
+
+## 5. Memory state/behavior split — 11F
 
 ### Critical: `memory-state.js`
 
-Chỉ chứa state/preference mà Topic/Profile cần:
+Chỉ có state/preference:
 
 ```text
-GO_CHU_MEMORY_WORDS_KEY
-GO_CHU_MEMORY_SECONDS_KEY
+Memory keys
 memoryModeActive
 memoryWordCount
 memorySeconds
-loadMemoryNumber/saveMemoryNumber
+load/save preference
 getPromptWordCount
 buildMemoryRound stub
 ```
-
-Không timer, không DOM, không Listen bridge.
 
 Debug:
 
@@ -128,50 +195,29 @@ getGoChuMemoryStateHealth()
 
 ### Post: `memory-mode.js`
 
-Sau first paint mới nạp:
-
-- timer/countdown;
-- Memory controls;
-- actual `buildMemoryRound`;
-- `setMemoryMode`;
-- wrappers `showText/setMode/checkNext`;
-- Listen/Memory exclusion.
-
-Nó **không được redeclare** state từ `memory-state.js`.
-
-Khi behavior sẵn sàng:
+Thay stub bằng actual Memory round, tạo timer/UI/wrappers và set:
 
 ```js
 GO_CHU_MEMORY_BEHAVIOR_READY = true
 ```
 
+Không được redeclare state.
+
 ### Post: `memory-topic-bridge.js`
 
-`topic-level.js` critical cần một `buildMemoryRound` binding sớm nên dùng stub. Khi `memory-mode.js` thay stub bằng implementation thật, bridge này gắn lại filter theo `selectedTopicId`.
-
-Ready flag:
+Gắn lại selected-topic filter cho actual Memory round sau khi behavior post-load.
 
 ```js
-GO_CHU_MEMORY_TOPIC_BRIDGE_READY
+GO_CHU_MEMORY_TOPIC_BRIDGE_READY = true
 ```
 
 ---
 
-## 5. Easy startup evolution
+## 6. Easy startup evolution
 
 ### 11 — CPU cache
 
-Đã loại near-O(n²) topic/effective-level scan bằng:
-
-```js
-GO_CHU_UNIQUE_EASY_PROMPTS
-GO_CHU_EASY_PROMPT_SET
-goChuTopicNormalizeCache
-goChuTopicMatchCache
-goChuWordCountCache
-goChuTopicPoolCache
-goChuLevelPoolCache
-```
+Loại near-O(n²) topic/effective-level scan bằng static caches.
 
 ### 11C — filtered round first
 
@@ -181,124 +227,101 @@ getLevelPool(topic, level)
 → weak insert phù hợp
 ```
 
-Không full-library shuffle rồi filter sau.
-
 ### 11D — boot/transition
 
-`easy-boot-state.js` dùng `currentMode="__boot__"` trong module load để tránh phantom Easy init.
-
-`easy-entry-transition.js` coalesce auxiliary UI và dời autofocus:
-
+- `currentMode="__boot__"` trong module load;
+- auxiliary UI coalesce double RAF;
 - desktop focus sau 2 frame;
 - mobile không autofocus.
 
-Debug:
-
-```js
-getGoChuBootState()
-getGoChuEasyEntryTransitionHealth()
-```
-
 ### 11E — critical/post split
 
-Từ 30 script / 13 CSS xuống 18 / 9 bằng cách post-load Free/Visual/Vietnamese/Stats/A11y/Debug.
+30 script / 13 CSS → 18 / 9 bằng cách post-load Free/Visual/Vietnamese/Stats/A11y/Debug.
 
-### 11F — optional Listen/TTS/Memory split
+### 11F — optional runtime split
 
-Tách Memory state khỏi behavior để đẩy Listen/TTS/Memory khỏi critical path, còn khoảng 14 script / 6 CSS.
+Tách Memory state khỏi behavior để đưa Listen/TTS/Memory behavior ra hậu kỳ. Critical còn khoảng 14 script / 6 CSS.
+
+### 11G — critical code-volume split
+
+Request count gần như giữ nguyên, nhưng `script.js` lớn không còn phải tải/parse/execute trước Easy. Critical chỉ chạy `easy-start.js` cực nhỏ; Free/Settings code chuyển hậu kỳ.
 
 ---
 
-## 6. Wrapper chain sau post-startup ready
+## 7. Wrapper chain sau post-ready
 
-### `showText`
+### Initial first Easy frame
 
-Theo thứ tự dependency tích lũy:
+Chỉ critical wrappers:
 
 ```text
 script-core
 → smart-review
 → topic-level
-→ startup-runtime-instrument/easy transition core
-→ visual-prompt (post)
-→ listen-mode (post)
-→ memory-mode (post)
-→ vietnamese-input (post)
-→ mode-stats (post, Hard guard)
+→ startup instrumentation
+→ easy-entry-transition
+→ easy-start calls setMode(easy)
 ```
 
-Lưu ý: post modules được gắn **sau initial `setMode("easy")`**, vì vậy initial first frame không chạy chúng. Từ prompt tiếp theo/future mode switch chúng hoạt động bình thường.
+### Sau post-ready
 
-### `setMode`
-
-Critical trước post:
+Outer wrappers được bổ sung:
 
 ```text
-script-core → smart-review → topic-level → startup instrument → easy transition
+visual-prompt
+listen-mode / tts-local
+memory-mode
+vietnamese-input
+mode-stats
 ```
-
-Sau post-load thêm Visual/Listen/TTS/Memory/Vietnamese wrappers ở ngoài chain.
 
 Invariant:
 
-- rời Easy phải dừng/ẩn Listen/Memory/Visual;
-- Easy-only tools không lộ Hard/Free.
-
-### `checkNext`
-
-- Smart Review implementation chính Easy/Hard.
-- Memory intercept khi active.
-- Mode stats ghi Hard ở post layer.
-
----
-
-## 7. Visual / Listen / TTS
-
-Visual post-load:
-
-```text
-semantic exact/contains
-→ local SVG
-→ pinned Twemoji CDN
-→ emoji fallback
-```
-
-First prompt được hydrate bằng `schedulePromptVisual(currentPrompt)` khi visual module vừa post-load.
-
-Listen/TTS post-load:
-
-```text
-local Google TTS MP3
-→ Web Speech vi-*
-→ warning
-```
-
-Voice enumeration chỉ khi thực sự bật Listen/mở Settings.
+- rời Easy dừng/ẩn Listen/Memory/Visual;
+- Easy-only tools không lộ Hard/Free;
+- script.js post-load không được rebuild Easy lần hai.
 
 ---
 
 ## 8. Profile/storage
 
-Profile state vẫn critical để initial Topic/Level/Memory preferences đúng ngay first round.
+`profile-stats.js` vẫn critical vì initial profile preferences phải có trước first Easy round.
 
-Dashboard DOM chỉ dựng khi bấm 👤.
+Dashboard DOM chỉ dựng khi bấm 👤, nhưng file hiện vẫn chứa cả runtime + dashboard code. Đây là **ứng viên điều tra tiếp theo** nếu 11G vẫn chưa đạt performance gate: tách profile runtime nhỏ khỏi dashboard/backup UI lớn.
 
 Post-load:
 
 - `mode-stats.js` hydrate Hard/Free stats;
 - `storage-health.js` compare-before-write;
-- accessibility gắn lazy modal semantics.
-
-Study time flush khoảng 15 giây.
+- accessibility gắn modal semantics.
 
 ---
 
-## 9. Diagnostics
+## 9. Visual / Listen / TTS
+
+Visual post-load:
+
+```text
+semantic exact/contains → local SVG → pinned CDN → emoji
+```
+
+Listen/TTS post-load:
+
+```text
+local Google MP3 → Web Speech vi-* → warning
+```
+
+Voice enumeration chỉ khi bật Listen/mở Settings.
+
+---
+
+## 10. Diagnostics
 
 Critical:
 
 ```js
 printGoChuStartupPerformance()
+getGoChuEasyBootstrapHealth()
 getGoChuBootState()
 getGoChuEasyEntryTransitionHealth()
 getGoChuPostStartupHealth()
@@ -325,43 +348,45 @@ showText:easy
 easy:buildFilteredRound
 easy:entrySyncGate
 easy:auxUiFlush
+easy:bootstrap
+easy:coreStarted
 postStartup:start
 postStartup:ready
 ```
 
 ---
 
-## 10. CI/static guards
+## 11. CI/static guards
 
-Workflow chạy:
+Workflow kiểm tra:
 
 1. Python compile.
-2. `node --check` toàn JS root.
-3. `tools/verify_repository.py`.
-4. `tools/verify_startup_loading.py`.
-5. `tools/verify_easy_entry.py`.
-6. `tools/verify_easy_transition.py`.
-7. `tools/verify_optional_runtime.py`.
+2. `node --check` JS root.
+3. `verify_repository.py`.
+4. `verify_startup_loading.py`.
+5. `verify_easy_entry.py`.
+6. `verify_easy_transition.py`.
+7. `verify_optional_runtime.py`.
 8. deploy readiness.
 9. Twemoji/TTS dry-run.
 
-CI phải fail nếu:
+CI fail nếu:
 
-- Listen/TTS/Memory behavior quay lại critical path;
-- `memory-state.js` bị mất/redeclare trong memory-mode;
-- post dependency order sai;
-- Memory topic bridge mất;
-- critical JS/CSS tăng lại ngoài budget;
-- post runtime validation/readiness guard mất.
+- `script.js` quay lại critical path;
+- `easy-start.js` mất official Easy startup/legacy guard;
+- Listen/TTS/Memory behavior quay lại critical;
+- post dependency order/readiness validation mất;
+- Memory state/bridge split bị phá;
+- critical JS/CSS tăng ngoài budget.
 
 ---
 
-## 11. Khi thêm feature/module
+## 12. Khi thêm feature/module
 
-1. Xác định feature có cần cho first Easy frame không.
-2. Nếu không cần → mặc định post-startup.
-3. Nếu chỉ cần state → tách state nhẹ khỏi behavior/UI.
-4. Audit wrapper/dependency order.
-5. Không thêm sync network/storage/full-pool scan vào critical path.
-6. Chạy toàn CI + browser smoke/performance QA.
+1. Xác định có cần cho first Easy frame không.
+2. Không cần → post-startup.
+3. Chỉ cần state → tách state nhẹ khỏi behavior/UI.
+4. Không đặt file lớn chỉ vì vài dòng startup cần chạy sớm; tách bootstrap nhỏ.
+5. Audit wrapper/dependency order.
+6. Chạy CI + browser performance QA.
 7. Cập nhật `RUNTIME_ARCHITECTURE.md` + `HANDOFF.md`.
