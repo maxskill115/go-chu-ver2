@@ -188,3 +188,11 @@ setMode = function(mode){
     if(mode === "easy") schedulePromptVisual(currentPrompt);
     else hidePromptVisual();
 };
+
+/*
+ * Phase 9 đợt 11E: visual module được post-load sau first Easy paint.
+ * Bù lại prompt hiện tại một lần khi module vừa sẵn sàng; các prompt sau đi qua wrapper như cũ.
+ */
+if(currentMode === "easy" && currentPrompt){
+    schedulePromptVisual(currentPrompt);
+}
