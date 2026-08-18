@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Guard Phase 9 đợt 11F: Listen/TTS/Memory behavior không nằm critical Easy path."""
+"""Guard Phase 9 đợt 11F/11G: optional runtimes không nằm critical Easy path."""
 
 from __future__ import annotations
 
@@ -27,17 +27,29 @@ def main() -> int:
     bridge = read("memory-topic-bridge.js")
     topic = read("topic-level.js")
     profile = read("profile-stats.js")
+    easy_start = read("easy-start.js")
 
     refs = re.findall(r'<script\s+src="([^"]+)"', html)
-    critical_required = ["topic-data.js", "memory-state.js", "script-core.js", "topic-level.js", "profile-stats.js", "script.js"]
+    critical_required = [
+        "topic-data.js", "memory-state.js", "script-core.js", "topic-level.js",
+        "profile-stats.js", "easy-entry-transition.js", "easy-start.js"
+    ]
     for name in critical_required:
         if name not in refs:
             fail(f"Critical path thiếu {name}")
 
-    forbidden_critical = ["tts-manifest.js", "listen-mode.js", "ux-hotfix.js", "tts-local.js", "memory-mode.js"]
+    forbidden_critical = [
+        "script.js", "tts-manifest.js", "listen-mode.js", "ux-hotfix.js",
+        "tts-local.js", "memory-mode.js"
+    ]
     leaked = [name for name in forbidden_critical if name in refs]
     if leaked:
         fail(f"Optional runtime quay lại critical path: {leaked}")
+
+    if 'setMode("easy")' not in easy_start:
+        fail("easy-start.js chưa thay script.js làm official Easy bootstrap")
+    if '"script.js"' not in post:
+        fail("script.js phải được post-load sau Easy")
 
     for snippet in [
         'const GO_CHU_MEMORY_WORDS_KEY', 'const GO_CHU_MEMORY_SECONDS_KEY',
@@ -65,7 +77,7 @@ def main() -> int:
         fail("profile-stats mất Memory preferences")
 
     post_order = [
-        "tts-manifest.js", "listen-mode.js", "ux-hotfix.js", "tts-local.js",
+        "script.js", "tts-manifest.js", "listen-mode.js", "ux-hotfix.js", "tts-local.js",
         "memory-mode.js", "memory-topic-bridge.js", "vietnamese-input.js"
     ]
     positions = {name: post.find(f'"{name}"') for name in post_order}
@@ -73,7 +85,10 @@ def main() -> int:
         if positions[current] < 0 or positions[nxt] < 0 or positions[current] >= positions[nxt]:
             fail(f"Sai post dependency order: {current} → {nxt}")
 
-    for snippet in ["validatePostRuntime", "runtimeValidated", "GO_CHU_MEMORY_BEHAVIOR_READY", "GO_CHU_MEMORY_TOPIC_BRIDGE_READY"]:
+    for snippet in [
+        "validatePostRuntime", "runtimeValidated", "GO_CHU_MEMORY_BEHAVIOR_READY",
+        "GO_CHU_MEMORY_TOPIC_BRIDGE_READY", "legacyEasySuppressed"
+    ]:
         if snippet not in post:
             fail(f"Post runtime validation thiếu {snippet}")
 
