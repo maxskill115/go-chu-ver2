@@ -1,481 +1,259 @@
 # HANDOFF — go-chu-ver2
 
-## 1. Mục tiêu
+## 1. Mục tiêu + quy tắc làm việc
 
 Web HTML/CSS/JS thuần cho bé luyện **đọc → gõ → sửa lỗi → ôn lại → nghe → nhớ**, có chủ đề, cấp độ, hồ sơ riêng, thống kê và hỗ trợ tiếng Việt.
 
-### Quy tắc làm việc bắt buộc
+Quy tắc bắt buộc:
 
-- Không backend khi chưa cần.
-- Không refactor lớn nếu không cần.
-- Mỗi đợt lớn: branch riêng → PR → CI → squash merge `main`.
-- **Mọi thay đổi, plan, điều tra nguyên nhân, PR/commit và việc còn lại đều phải ghi vào HANDOFF này.**
+- Không backend/refactor lớn khi chưa cần.
+- Mỗi đợt lớn: branch → PR → CI → squash merge `main`.
+- **Mọi điều tra, plan, thay đổi, PR/commit và việc còn lại đều ghi vào HANDOFF này.**
 - Easy-only feature không được lộ sang Hard/Free.
-- UI phải dùng tốt PC + mobile.
+- UI phải ổn PC + mobile.
 - Không đưa API key/credential vào browser/runtime.
-- Với lỗi hiệu năng: **điều tra/trace nguyên nhân trước → xác định xong thì tự fix luôn → không hỏi lại người dùng giữa chừng.**
-- Không tối ưu cảm tính bằng CSS nếu chưa xác định hot-path/runtime/network/layout liên quan.
+- Với lỗi hiệu năng: **trace nguyên nhân trước → xác định xong tự fix luôn → không hỏi lại người dùng giữa chừng.**
 
 ---
 
-## 2. Roadmap hiện tại
+## 2. Roadmap
 
-### Hoàn tất
-
-- [x] Phase 0 — Khởi tạo ver2.
-- [x] Phase 1 — Levenshtein diff + hotfix UI bỏ ô đỏ/SP.
-- [x] Phase 2 — Smart random + prompt yếu + Ôn lại.
-- [x] Phase 3 — Ảnh + chữ + emoji fallback.
-- [x] Phase 4 — Nghe rồi gõ, voice Việt.
-- [x] Phase 5 — Nhớ rồi gõ.
-- [x] Phase 6 — Chủ đề + cấp độ.
-- [x] Phase 7 — Hồ sơ bé + dashboard + backup.
-- [x] Phase 8 — Progress theo từ + lỗi dấu + Telex/VNI.
-
-### Phase 9 — Stabilization / performance / responsive
-
-- [x] Đợt 1 — smoke test + QA checklist.
-- [x] Đợt 2 — wrapper audit + Hard/Free stats.
-- [x] Đợt 3 — accessibility + keyboard.
-- [x] Đợt 4 — storage audit.
-- [x] Đợt 5 — asset reliability + fallback.
-- [x] Đợt 6 — offline visual framework + CI/static verify.
-- [x] Đợt 7 — deploy QA prep + readiness report.
-- [x] Đợt 8 — UI scope + visual accuracy.
-- [x] Đợt 9 — visual mapping round 2.
-- [x] Đợt 10 — freeze/stability audit + runtime diagnostics.
-- [x] Đợt 11 — Easy CPU startup rewrite.
-- [x] Đợt 11B — startup network parallel + lazy audio.
-- [x] Đợt 11C — Easy entry fast-path.
-- [x] Đợt 11D — Easy boot state + transition gate.
-- [~] **Đợt 11E — critical Easy path / post-startup split** trên branch `agent/easy-critical-path-split`.
+- [x] Phase 0–8: baseline ver2, diff lỗi, Smart Review, visual, Listen, Memory, Topic/Level, Profiles, Vietnamese input.
+- [x] Phase 9.1–9.10: QA, wrapper audit, accessibility, storage, asset fallback, offline visual framework, deploy QA, UI scope/visual accuracy, freeze diagnostics.
+- [x] Phase 9.11: Easy CPU startup rewrite.
+- [x] Phase 9.11B: startup network parallel + lazy audio.
+- [x] Phase 9.11C: Easy filtered-pool fast-path.
+- [x] Phase 9.11D: neutral boot state + Easy transition gate.
+- [x] **Phase 9.11E: critical Easy path / post-startup split.**
 - [ ] Browser/device performance gate trên Vercel/local thật.
-- [ ] **Đợt 12 — responsive UI redesign PC/mobile.**
-
-### Phase 10 — Pre-rendered Google TTS MP3
-
-- [x] Runtime MP3 local-first + Web Speech fallback.
-- [x] Google Cloud TTS renderer + Windows `.bat`.
-- [x] Manifest deterministic + incremental/resume.
-- [ ] Người dùng render MP3 thật.
-- [ ] Commit `Audio/tts/*.mp3` + manifest đầy đủ.
+- [ ] Phase 9.12: responsive UI redesign PC/mobile.
+- [~] Phase 10 Google TTS: framework xong, MP3 thật chờ người dùng render.
 
 ---
 
-## 3. PR / commit chính
+## 3. PR / commit quan trọng
 
 - Phase 1: PR #1 → `1e8450b`
 - Phase 2: PR #2 → `11b5689`
 - Phase 3: PR #3 → `e0fe068`
 - Phase 4: PR #4 → `6cc6b00`
-- Hotfix UX/voice: PR #5 → `26cdb63`
+- UX/voice hotfix: PR #5 → `26cdb63`
 - Phase 5: PR #6 → `daecd42`
 - Phase 6: PR #7 → `18552e0`
 - Phase 7: PR #8 → `e281c40`
 - Phase 8: PR #9 → `10d756e`
-- Phase 9 đợt 1: PR #10 → `36d16dc`
-- Phase 9 đợt 2: PR #12 → `7d598f2`
-- Phase 9 đợt 3: PR #13 → `94bb3ef`
-- Phase 9 đợt 4: PR #14 → `d750722`
-- Phase 9 đợt 5: PR #15 → `0e0ce0e`
+- Phase 9.1: PR #10 → `36d16dc`
+- Phase 9.2: PR #12 → `7d598f2`
+- Phase 9.3: PR #13 → `94bb3ef`
+- Phase 9.4: PR #14 → `d750722`
+- Phase 9.5: PR #15 → `0e0ce0e`
 - Phase 10 framework: PR #17 → `b7e52fd`
-- Phase 9 đợt 6: PR #19 → `58f295d`
-- Phase 9 đợt 7: PR #20 → `24f6673`
-- Phase 9 đợt 8: PR #22 → `14d04bd`
-- Phase 9 đợt 9: PR #24 → `ed76406`
-- Phase 9 đợt 10: PR #26 → `25d2727`
-- Performance + responsive plan: PR #28 → `1cd65bc`
-- Easy CPU startup rewrite: PR #29 → `b27de10`
+- Phase 9.6: PR #19 → `58f295d`
+- Phase 9.7: PR #20 → `24f6673`
+- Phase 9.8: PR #22 → `14d04bd`
+- Phase 9.9: PR #24 → `ed76406`
+- Phase 9.10: PR #26 → `25d2727`
+- Performance/UI plan: PR #28 → `1cd65bc`
+- Easy CPU rewrite: PR #29 → `b27de10`
 - Startup network/lazy audio: PR #31 → `3b13a7a`
-- Handoff startup network: PR #32 → `2f28b49`
-- Easy entry fast-path: PR #33 → `b6876c0`
-- Handoff Easy fast-path: PR #34 → `0c86aba`
-- Easy boot/transition 11D: PR #35 → `3d63d67`
+- Handoff startup: PR #32 → `2f28b49`
+- Easy filtered fast-path: PR #33 → `b6876c0`
+- Handoff 11C: PR #34 → `0c86aba`
+- Easy boot/transition: PR #35 → `3d63d67`
 - Handoff 11D: PR #36 → `9128040`
-- **11E critical/post split: branch `agent/easy-critical-path-split`, PR/commit cập nhật sau CI/merge.**
+- **Critical/post-startup split 11E: PR #37 → `0d5afff`**
 
-### Tooling cleanup đã biết
-
-- Branch rỗng `noop` từng tạo nhầm; không ảnh hưởng `main`.
-- `EASY_ENTRY_FIX.tmp`, `noop.tmp`, `TEMP_SHOULD_NOT_EXIST.tmp` từng tạo nhầm trong quá trình thao tác tool và đã xóa; không nằm trong tree release.
+Tooling cleanup: branch `noop` và các file tạm `EASY_ENTRY_FIX.tmp`, `noop.tmp`, `TEMP_SHOULD_NOT_EXIST.tmp` từng tạo nhầm nhưng đã xóa; không nằm trong tree release.
 
 ---
 
 ## 4. Mode scope invariant
 
-### Easy-only
+Easy-only:
 
-Chỉ Easy được chạy/hiển thị:
+```text
+Topic/Level
+Smart Review
+Visual
+Listen/TTS
+Memory
+adaptive promptStats
+```
 
-- Topic / Level.
-- Smart Review / Ôn lại.
-- Visual prompt.
-- Listen / Nghe rồi gõ.
-- Memory / Nhớ rồi gõ.
-- Adaptive `promptStats`.
-
-### Hard
-
-- Prompt nâng cao + input/check + `modeStats.hard`.
-- Không Listen / Memory / Topic-Level / Review / Visual.
-
-### Free
-
-- Setup/custom text/typing Free + `modeStats.free`.
-- Không control Easy.
+Hard chỉ dùng prompt Hard + `modeStats.hard`. Free chỉ dùng Free flow + `modeStats.free`. Hard/Free không được chạy UI/adaptive Easy.
 
 ---
 
-## 5. Lịch sử điều tra hiệu năng Easy
+## 5. Chuỗi điều tra hiệu năng Easy
 
-### 5.1 Freeze/stability — PR #26
+### 11 — CPU/pool
 
-Đã bỏ auto fullscreen trên `click/keydown/wheel`, throttle Free resize/input và tránh dựng lại hàng chục thumbnail mỗi lần mở Free dropdown.
+Root cause cũ: topic/effective-level scan/filter lặp gần O(n²). Đã cache unique prompts, topic normalize/match, word count, topic pool, level pool.
 
-Debug:
+### 11B — network/audio
 
-```js
-printGoChuPerformanceHealth()
-```
+Root cause cũ: CSS `@import` waterfall, nhiều classic JS, audio preload sớm. Đã direct CSS/defer JS và `audio-lazy-bootstrap.js` để audio chỉ gắn src lúc thật sự play.
 
-### 5.2 Easy CPU startup rewrite — PR #29
-
-Root cause: topic/effective-level từng bị tính/filter lặp trên toàn kho Easy, gần O(n²).
-
-Cache:
-
-```js
-GO_CHU_UNIQUE_EASY_PROMPTS
-GO_CHU_EASY_PROMPT_SET
-goChuTopicNormalizeCache
-goChuTopicMatchCache
-goChuWordCountCache
-goChuTopicPoolCache
-goChuLevelPoolCache
-```
-
-Visual, voice enumeration, dashboard DOM và asset probe đã được lazy/defer.
-
-### 5.3 Startup network + lazy audio — PR #31
-
-Root cause lúc đó:
-
-- 13 CSS qua `@import` waterfall;
-- khoảng 27 JS classic script;
-- background/UI audio tạo/preload quá sớm.
-
-Fix:
-
-- stylesheet direct trong head;
-- JS `defer`;
-- `audio-lazy-bootstrap.js` trước core;
-- audio chỉ gắn `src` khi thật sự play sau user activation.
-
-### 5.4 Easy entry fast-path — PR #33
+### 11C — full-library shuffle
 
 Root cause:
 
 ```text
-toàn bộ easyWords
-→ shuffle toàn bộ
-→ chèn weak prompt
-→ cuối cùng mới filter Chủ đề/Cấp độ
+toàn easyWords → shuffle → weak insert → mới filter topic/level
 ```
 
 Fix:
 
 ```text
-getEffectiveLearningLevel một lần
-→ getLevelPool(topic, level) cached
-→ shuffle đúng pool đã lọc
-→ chèn weak prompt phù hợp
+getLevelPool(topic, effectiveLevel) cached
+→ shuffle đúng pool
+→ insert weak phù hợp
 ```
 
-Có weak-prompt cache + timing:
+Timing: `easy:buildFilteredRound`.
 
-```text
-easy:buildFilteredRound
-```
+### 11D — phantom init + duplicate UI + mobile focus
 
-### 5.5 Easy boot/transition 11D — PR #35
+Root cause:
 
-Điều tra phát hiện:
-
-1. `script-core.js` khởi tạo `currentMode="easy"` trước khi `script.js` gọi `setMode("easy")` → phantom Easy init.
-2. `showText()` đã update UI, sau đó wrapper `setMode` update thêm lượt nữa.
-3. `input.focus()` giữa critical layout trên mobile mở keyboard/resize viewport quá sớm.
+1. `currentMode="easy"` tồn tại trước `script.js -> setMode("easy")` → module Easy-only tự init một lượt sớm.
+2. `showText()` update UI rồi wrapper `setMode` update thêm lượt nữa.
+3. `input.focus()` giữa critical layout mở mobile keyboard/resize quá sớm.
 
 Fix:
 
-- `easy-boot-state.js` → `currentMode="__boot__"` trong lúc module Easy-only nạp;
-- `easy-entry-transition.js` coalesce Smart/Topic/Visual/Listen/Memory/Vietnamese UI;
-- double RAF cho UI phụ;
-- mobile không autofocus khi vừa vào Easy;
-- desktop focus sau 2 frame.
+- `easy-boot-state.js` → `currentMode="__boot__"` trong lúc load module.
+- `easy-entry-transition.js` coalesce auxiliary UI bằng double RAF.
+- desktop focus sau 2 frame; mobile không autofocus.
 
-Debug:
+Diagnostics:
 
 ```js
 getGoChuBootState()
 getGoChuEasyEntryTransitionHealth()
 ```
 
-Measures:
+Measures: `easy:entrySyncGate`, `easy:auxUiFlush`.
 
-```text
-easy:entrySyncGate
-easy:auxUiFlush
-```
+### 11E — critical execution path quá dài
 
-CI PR #35 PASS trước merge.
-
----
-
-## 6. Điều tra 11E — critical execution path vẫn quá dài
-
-Sau 11D tiếp tục audit trực tiếp `index.html` thay vì chờ user gửi log.
-
-### Bằng chứng
-
-Production trước 11E có:
+Điều tra trực tiếp `index.html` sau 11D cho thấy trước fix:
 
 ```text
 30 external script tag
 13 blocking stylesheet
+script.js khoảng vị trí #23
 ```
 
-`script.js` — file cuối cùng gọi `setMode("easy")` — nằm khoảng **vị trí script #23**.
+`defer` chỉ song song download nhưng vẫn giữ execution order. Trước `script.js` vẫn có Free data, visual/Twemoji, Vietnamese UI/dashboard không cần cho first usable Easy frame.
 
-Trước khi Easy được activate, ordered `defer` chain vẫn chứa cả resource không cần cho first usable Easy frame:
-
-```text
-data-poems.js                 (Free-only)
-visual-data.js
- twemoji-local-manifest.js
-visual-prompt.js
-vietnamese-input.js
-vietnamese-dashboard.js
-```
-
-Sau `script.js` còn các module không cần chặn first paint:
-
-```text
-stability-fixes.js
-mode-stats.js
-storage-health.js
-asset-reliability.js
-accessibility.js
-performance-health.js
-debug-smoke.js
-```
-
-### Kết luận root cause
-
-`defer` giúp **download song song**, nhưng classic deferred scripts vẫn **execute theo document order**.
-
-Vì `script.js` ở rất muộn, chỉ cần một resource trước nó tải/parse chậm là:
-
-```text
-HTML đã hiện
-nhưng Easy chưa setMode
-→ người dùng cảm giác mode Đơn giản vào rất lâu
-```
-
-Đây là bottleneck kiến trúc khác với O(n²), duplicate wrapper hay audio preload đã sửa trước đó.
+=> HTML có thể đã hiện nhưng Easy vẫn phải chờ resource không liên quan.
 
 ---
 
-## 7. Phase 9 đợt 11E — fix đang triển khai
+## 6. Phase 9.11E — đã merge PR #37 → `0d5afff`
 
-Branch:
+### Critical path mới
 
-```text
-agent/easy-critical-path-split
-```
-
-### 7.1 Critical Easy path mới
-
-`index.html` giờ chỉ giữ các script cần để Easy core hoạt động đúng ngay lập tức:
+`index.html` first-start chỉ còn **18 script tag**:
 
 ```text
-startup-performance.js
+startup-performance
 
-data-easy.js
-tts-manifest.js
-topic-data.js
-audio-lazy-bootstrap.js
-script-core.js
-easy-boot-state.js
-smart-review.js
-listen-mode.js
-ux-hotfix.js
-tts-local.js
-memory-mode.js
-topic-level.js
-profile-stats.js
-startup-runtime-instrument.js
-easy-entry-transition.js
-script.js
-post-startup-loader.js
+data-easy
+tts-manifest
+topic-data
+audio-lazy-bootstrap
+script-core
+easy-boot-state
+smart-review
+listen-mode
+ux-hotfix
+tts-local
+memory-mode
+topic-level
+profile-stats
+startup-runtime-instrument
+easy-entry-transition
+script
+post-startup-loader
 ```
 
-Tổng critical script tag mục tiêu: **18** thay vì 30.
+`script.js`/`setMode("easy")` không còn chờ Free/visual/Vietnamese-dashboard/stats/debug modules.
 
-`script.js` được đưa từ khoảng vị trí #23 lên gần cuối critical core (~#17), nên `setMode("easy")` không còn chờ Free/visual/Vietnamese-dashboard/stats/debug modules.
+Critical CSS giảm **13 → 9**. Optional CSS visual/Vietnamese/accessibility/asset chuyển post-load.
 
-### 7.2 Critical CSS mới
-
-First render chỉ giữ:
-
-```text
-styles-1.css
-styles-2.css
-smart-review.css
-listen-mode.css
-ux-hotfix.css
-memory-mode.css
-topic-level.css
-profile-stats.css
-ui-scope-fixes.css
-```
-
-Tổng: **9 CSS blocking** thay vì 13.
-
-Post-load CSS:
-
-```text
-visual-prompt.css
-vietnamese-input.css
-accessibility.css
-asset-reliability.css
-```
-
-### 7.3 `post-startup-loader.js`
-
-Nạp ngay sau `script.js` nhưng **không tải feature phụ ngay**.
+### `post-startup-loader.js`
 
 Luồng:
 
 ```text
-script.js → setMode("easy")
+script.js → setMode(easy)
 → RAF #1
-→ browser paint Easy core
+→ browser có first Easy paint
 → RAF #2
-→ bắt đầu post-startup downloads
+→ load feature hậu kỳ
 ```
 
-13 module hậu kỳ:
+13 post scripts:
 
 ```text
-data-poems.js
-visual-data.js
-twemoji-local-manifest.js
-visual-prompt.js
-vietnamese-input.js
-vietnamese-dashboard.js
-stability-fixes.js
-mode-stats.js
-storage-health.js
-asset-reliability.js
-accessibility.js
-performance-health.js
-debug-smoke.js
+data-poems
+visual-data
+twemoji-local-manifest
+visual-prompt
+vietnamese-input
+vietnamese-dashboard
+stability-fixes
+mode-stats
+storage-health
+asset-reliability
+accessibility
+performance-health
+debug-smoke
 ```
 
-Dynamic script dùng:
+Dynamic scripts dùng `async=false` để giữ dependency execution order.
 
-```js
-script.async = false;
-```
+Trong warm-up:
 
-để browser có thể bắt đầu download các file nhưng vẫn giữ classic dependency execution order.
+- Easy usable ngay.
+- Hard + Free tạm disabled/`aria-busy=true` để tránh vào mode khi `mode-stats`/`data-poems` chưa sẵn sàng.
+- Khi post modules ready, Hard/Free tự mở lại.
 
-### 7.4 Race guard Hard/Free
+Visual post-load tự hydrate prompt Easy hiện tại nên hình chỉ đến sau prompt/input một nhịp.
 
-Trong post-startup warm-up:
-
-- Easy vẫn usable.
-- Hard + Free tạm `disabled` và `aria-busy=true`.
-- Khi post modules sẵn sàng, hai mode tự mở lại.
-
-Lý do:
-
-- Free cần `data-poems.js`.
-- Hard/Free stats cần `mode-stats.js`.
-- Không cho người dùng vào mode phụ ở cửa sổ vài frame khi extension chưa hoàn chỉnh.
-
-### 7.5 Visual first prompt hydration
-
-`visual-prompt.js` giờ khi được post-load sẽ tự:
-
-```js
-if(currentMode === "easy" && currentPrompt){
-    schedulePromptVisual(currentPrompt);
-}
-```
-
-=> prompt/input Easy xuất hiện trước; hình hiện sau một nhịp, đúng chủ đích performance.
-
-### 7.6 Diagnostics 11E
+Diagnostics:
 
 ```js
 getGoChuPostStartupHealth()
-```
-
-Trả:
-
-```text
-scheduledAt
-startedAt
-readyAt
-durationMs
-ready/loading
-loadedScripts / failedScripts
-loadedStyles / failedStyles
-scriptCount / styleCount
-pendingScripts / pendingStyles
-```
-
-Global:
-
-```js
 GO_CHU_POST_STARTUP_READY
 ```
 
-Events:
-
-```text
-gochu:post-startup-ready
-```
-
-Startup marks:
+Marks:
 
 ```text
 postStartup:start
 postStartup:ready
 ```
 
-### 7.7 CI/QA 11E
+CI PR #37 **PASS toàn bộ** trước squash merge.
 
-`tools/verify_startup_loading.py` đã nâng cấp để fail nếu:
+Guards đã cập nhật:
 
-- critical JS > 20;
-- post modules quay lại direct script trong `index.html`;
-- optional CSS quay lại blocking head;
-- mất double RAF;
-- dynamic script không `async=false`;
-- mất readiness API;
-- Hard/Free không bị khóa trong warm-up.
+```text
+tools/verify_repository.py
+tools/verify_startup_loading.py
+PERFORMANCE_QA.md
+```
 
-`tools/verify_repository.py` cũng hiểu critical/post split.
-
-`PERFORMANCE_QA.md` đã có test 11E.
+CI fail nếu critical scripts tăng >20, optional modules/CSS quay lại first path, mất double RAF/ordered dynamic scripts/readiness guard.
 
 ---
 
-## 8. Runtime diagnostics hiện có
+## 7. Diagnostics ưu tiên
 
-Khi điều tra Easy:
+Ngay khi vào Easy:
 
 ```js
 printGoChuStartupPerformance()
@@ -486,7 +264,7 @@ getGoChuLearningPoolHealth()
 getGoChuSmartReviewHealth()
 ```
 
-Sau post-startup ready:
+Sau `GO_CHU_POST_STARTUP_READY === true`:
 
 ```js
 printGoChuPerformanceHealth()
@@ -495,7 +273,7 @@ getGoChuAssetHealth()
 getGoChuStorageHealth()
 ```
 
-Stage quan trọng:
+Stage cần nhìn:
 
 ```text
 setMode:easy
@@ -509,114 +287,65 @@ postStartup:ready
 
 ---
 
-## 9. Responsive UI redesign — Phase 9 đợt 12
+## 8. Phase 9.12 UI redesign plan
 
-**Chưa bắt đầu cho tới khi performance gate sau 11E đạt trên browser/device thật.**
+Chỉ bắt đầu khi Easy performance gate ổn.
 
-### PC >= 1024px
+PC:
 
 ```text
-Menu/Profile/Timer/Settings
+header compact
 Title + Mode
-Prompt / visual
-1 toolbar compact: Topic | Level | Nghe | Nhớ | Ôn
+Prompt/visual
+1 toolbar: Topic | Level | Nghe | Nhớ | Ôn
 Input
-Tiếp theo
-Feedback fixed-height
+Next
+feedback fixed-height
 ```
 
-### Mobile <= 767px
+Mobile:
 
 ```text
-☰  Timer  👤 ⚙
+☰ Timer 👤 ⚙
 Mode compact
 Prompt
 visual nhỏ
 Input
-Tiếp theo
+Next
 2 hàng tool compact
-Feedback
+feedback
 ```
 
-- không auto-open keyboard khi vừa vào Easy;
-- touch target >= 48px;
-- Memory details chỉ hiện khi active;
-- Replay chỉ hiện khi Listen active.
+Không auto-open keyboard khi vừa vào Easy. Touch target >=48px. Memory details/Replay chỉ hiện khi feature active.
 
-Dashboard:
+QA: `360×640`, `390×844`, `430×932`, `768×1024`, `1366×768`, `1440×900`, `1920×1080`, zoom 125/150%.
 
-- desktop summary cards + tabs;
-- mobile full-screen sheet + tab/accordion.
+---
 
-QA:
+## 9. Google TTS / Visual
+
+TTS Easy-only:
 
 ```text
-360×640
-390×844
-430×932
-768×1024
-1366×768
-1440×900
-1920×1080
-zoom 125% / 150%
+local Google MP3 → Web Speech vi-* → warning
+```
+
+Default renderer: `vi-VN-Chirp3-HD-Aoede`, rate `0.82`. MP3 thật vẫn chờ user render.
+
+Visual:
+
+```text
+semantic exact/contains → local Twemoji → pinned CDN → emoji fallback
 ```
 
 ---
 
-## 10. Google TTS
+## 10. Việc tiếp theo cho phiên sau
 
-Easy-only runtime:
-
-```text
-1. MP3 Google TTS local
-2. Web Speech vi-*
-3. báo thiếu audio
-```
-
-Default renderer:
-
-```text
-vi-VN-Chirp3-HD-Aoede
-rate 0.82
-MP3
-```
-
-MP3 thật chưa render vì chờ Google Cloud account người dùng.
-
----
-
-## 11. Visual pipeline
-
-```text
-semantic exact/contains
-→ local Twemoji SVG nếu có
-→ pinned CDN
-→ emoji fallback
-```
-
-Không match semantic → không hiện hình.
-
----
-
-## 12. Thứ tự tiếp theo cho phiên làm việc sau
-
-1. Hoàn tất 11E trên `agent/easy-critical-path-split`.
-2. Mở PR và chạy toàn CI.
-3. CI fail → xem đúng step, sửa ngay trên branch; không merge mù.
-4. CI PASS → squash merge `main` và ghi PR/commit thật vào HANDOFF.
-5. Test local/Vercel bằng:
-
-```js
-printGoChuStartupPerformance()
-getGoChuBootState()
-getGoChuEasyEntryTransitionHealth()
-getGoChuPostStartupHealth()
-getGoChuLearningPoolHealth()
-getGoChuSmartReviewHealth()
-```
-
-6. Xác nhận Easy usable trước `postStartup:start`; post modules hoàn tất sau đó và `ready=true`.
-7. Nếu Easy vẫn chậm: tiếp tục trace stage còn lại → **điều tra rồi fix luôn**, không hỏi lại.
-8. Chỉ khi Easy ổn mới bắt đầu Phase 9 đợt 12 redesign UI PC/mobile.
-9. Sau redesign chạy full QA.
-10. Sau cùng hoàn thiện Google TTS binary/Twemoji local nếu muốn offline 100%.
+1. Main runtime hiện tại cần có **`0d5afff`** + commit HANDOFF bookkeeping sau PR #37.
+2. Test Vercel/local 11E với diagnostics mục 7.
+3. Xác nhận Easy usable trước `postStartup:start`; sau đó post loader `ready=true`, `failedScripts=[]`.
+4. Nếu Easy vẫn chậm: tiếp tục trace **critical core còn lại** (đặc biệt Listen/TTS/Memory/Profile dependency) → điều tra xong tự fix, không hỏi lại.
+5. Nếu Easy ổn: bắt đầu Phase 9.12 responsive UI redesign.
+6. Sau redesign chạy full PC/mobile QA.
+7. Sau cùng hoàn thiện Google TTS binary/Twemoji local nếu cần offline 100%.
