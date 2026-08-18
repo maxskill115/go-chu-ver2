@@ -44,7 +44,9 @@
         loadedScripts: 0,
         failedScripts: [],
         loadedStyles: 0,
-        failedStyles: []
+        failedStyles: [],
+        runtimeValidated: false,
+        runtimeChecks: {}
     };
 
     window.GO_CHU_POST_STARTUP_STYLES = POST_STYLES;
@@ -99,12 +101,38 @@
         });
     }
 
+    function validatePostRuntime(){
+        const checks = {
+            freeData: typeof freePoems !== "undefined" && Array.isArray(freePoems),
+            listen: typeof setListenMode === "function" && typeof toggleListenMode === "function",
+            tts: typeof getGoChuTtsHealth === "function",
+            memory: typeof setMemoryMode === "function" && Boolean(window.GO_CHU_MEMORY_BEHAVIOR_READY),
+            memoryTopic: Boolean(window.GO_CHU_MEMORY_TOPIC_BRIDGE_READY),
+            vietnameseInput: typeof refreshVietnameseProgressUI === "function",
+            modeStats: typeof getStandaloneModeSummary === "function",
+            storage: typeof getGoChuStorageHealth === "function",
+            performance: typeof getGoChuPerformanceHealth === "function"
+        };
+        state.runtimeChecks = checks;
+        state.runtimeValidated = Object.values(checks).every(Boolean);
+        return state.runtimeValidated;
+    }
+
     function finishPostStartup(styleResults, scriptResults){
         state.loadedStyles = styleResults.filter(item => item.ok).length;
         state.failedStyles = styleResults.filter(item => !item.ok).map(item => item.href);
         state.loadedScripts = scriptResults.filter(item => item.ok).length;
         state.failedScripts = scriptResults.filter(item => !item.ok).map(item => item.src);
-        state.ready = state.failedScripts.length === 0;
+
+        const runtimeOk = validatePostRuntime();
+        if(!runtimeOk){
+            const missing = Object.entries(state.runtimeChecks)
+                .filter(([, value]) => !value)
+                .map(([name]) => name);
+            state.failedScripts.push(`runtime:${missing.join(",")}`);
+        }
+
+        state.ready = state.failedScripts.length === 0 && runtimeOk;
         state.loading = false;
         state.readyAt = performance.now();
         state.durationMs = state.readyAt - state.startedAt;
@@ -114,6 +142,8 @@
         window.dispatchEvent(new CustomEvent("gochu:post-startup-ready", {
             detail: {
                 ready: state.ready,
+                runtimeValidated: state.runtimeValidated,
+                runtimeChecks: { ...state.runtimeChecks },
                 failedScripts: [...state.failedScripts],
                 failedStyles: [...state.failedStyles]
             }
@@ -157,8 +187,8 @@
             ...state,
             scriptCount: POST_SCRIPTS.length,
             styleCount: POST_STYLES.length,
-            pendingScripts: Math.max(0, POST_SCRIPTS.length - state.loadedScripts - state.failedScripts.length),
-            pendingStyles: Math.max(0, POST_STYLES.length - state.loadedStyles - state.failedStyles.length),
+            pendingScripts: Math.max(0, POST_SCRIPTS.length - state.loadedScripts),
+            pendingStyles: Math.max(0, POST_STYLES.length - state.loadedStyles),
             memoryBehaviorReady: Boolean(window.GO_CHU_MEMORY_BEHAVIOR_READY),
             memoryTopicBridgeReady: Boolean(window.GO_CHU_MEMORY_TOPIC_BRIDGE_READY)
         };
