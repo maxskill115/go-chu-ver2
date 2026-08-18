@@ -47,20 +47,20 @@
     window.GO_CHU_POST_STARTUP_SCRIPTS = POST_SCRIPTS;
     window.GO_CHU_POST_STARTUP_READY = false;
 
-    function getFreeModeButton(){
-        return document.querySelector('.mode-btn[data-mode="free"]');
+    function getSecondaryModeButtons(){
+        return Array.from(document.querySelectorAll('.mode-btn[data-mode="hard"], .mode-btn[data-mode="free"]'));
     }
 
-    function setFreeModePending(pending){
-        const button = getFreeModeButton();
-        if(!button) return;
-        button.disabled = Boolean(pending);
-        button.setAttribute("aria-busy", pending ? "true" : "false");
-        if(pending){
-            button.title = "Đang nạp chế độ Tự do…";
-        }else if(button.title === "Đang nạp chế độ Tự do…"){
-            button.removeAttribute("title");
-        }
+    function setSecondaryModesPending(pending){
+        getSecondaryModeButtons().forEach(button => {
+            button.disabled = Boolean(pending);
+            button.setAttribute("aria-busy", pending ? "true" : "false");
+            if(pending){
+                button.title = "Đang nạp tính năng bổ sung…";
+            }else if(button.title === "Đang nạp tính năng bổ sung…"){
+                button.removeAttribute("title");
+            }
+        });
     }
 
     function loadStyle(href){
@@ -109,7 +109,7 @@
         state.durationMs = state.readyAt - state.startedAt;
 
         window.GO_CHU_POST_STARTUP_READY = state.ready;
-        setFreeModePending(!state.ready);
+        setSecondaryModesPending(!state.ready);
 
         window.dispatchEvent(new CustomEvent("gochu:post-startup-ready", {
             detail: {
@@ -128,7 +128,7 @@
         if(state.loading || state.ready) return;
         state.loading = true;
         state.startedAt = performance.now();
-        setFreeModePending(true);
+        setSecondaryModesPending(true);
 
         if(typeof goChuStartupMark === "function"){
             goChuStartupMark("postStartup:start");
@@ -152,7 +152,7 @@
                 state.readyAt = performance.now();
                 state.durationMs = state.readyAt - state.startedAt;
                 state.failedScripts.push(String(error?.message || error || "post-startup error"));
-                setFreeModePending(true);
+                setSecondaryModesPending(true);
             });
     }
 
@@ -176,6 +176,6 @@
         };
     };
 
-    setFreeModePending(true);
+    setSecondaryModesPending(true);
     scheduleAfterFirstPaint();
 })();
