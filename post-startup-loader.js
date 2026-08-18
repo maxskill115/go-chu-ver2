@@ -1,4 +1,4 @@
-/* ===== PHASE 9 ĐỢT 11E/11F/11G - POST STARTUP FEATURE LOADER =====
+/* ===== PHASE 9 ĐỢT 11E/11F/11G/11H - POST STARTUP FEATURE LOADER =====
  * Easy core activate trước; feature không cần cho first usable frame tải sau double RAF.
  */
 (function(){
@@ -7,6 +7,7 @@
         "ux-hotfix.css",
         "memory-mode.css",
         "visual-prompt.css",
+        "profile-stats.css",
         "vietnamese-input.css",
         "accessibility.css",
         "asset-reliability.css"
@@ -24,6 +25,7 @@
         "tts-local.js",
         "memory-mode.js",
         "memory-topic-bridge.js",
+        "profile-dashboard.js",
         "vietnamese-input.js",
         "vietnamese-dashboard.js",
         "stability-fixes.js",
@@ -116,7 +118,7 @@
 
         /*
          * script.js là source legacy lớn chứa Free/Settings handlers và 2 dòng
-         * startup cũ. Load riêng đầu tiên để easy-start.js có thể nhận diện đúng
+         * startup cũ. Load riêng đầu tiên để easy-start.js nhận diện đúng
          * lời gọi setMode("easy") legacy và suppress nó mà không chặn click user.
          */
         window.GO_CHU_EXECUTING_POST_SCRIPT = "script.js";
@@ -140,6 +142,9 @@
             tts: typeof getGoChuTtsHealth === "function",
             memory: typeof setMemoryMode === "function" && Boolean(window.GO_CHU_MEMORY_BEHAVIOR_READY),
             memoryTopic: Boolean(window.GO_CHU_MEMORY_TOPIC_BRIDGE_READY),
+            profileUi: Boolean(window.GO_CHU_PROFILE_DASHBOARD_READY) &&
+                typeof openProfileDashboard === "function" &&
+                typeof renderProfileDashboard === "function",
             vietnameseInput: typeof refreshVietnameseProgressUI === "function",
             modeStats: typeof getStandaloneModeSummary === "function",
             storage: typeof getGoChuStorageHealth === "function",
@@ -224,6 +229,8 @@
             pendingStyles: Math.max(0, POST_STYLES.length - state.loadedStyles),
             memoryBehaviorReady: Boolean(window.GO_CHU_MEMORY_BEHAVIOR_READY),
             memoryTopicBridgeReady: Boolean(window.GO_CHU_MEMORY_TOPIC_BRIDGE_READY),
+            profileRuntimeReady: Boolean(window.GO_CHU_PROFILE_RUNTIME_READY),
+            profileDashboardReady: Boolean(window.GO_CHU_PROFILE_DASHBOARD_READY),
             easyCoreStarted: Boolean(window.GO_CHU_EASY_CORE_STARTED),
             legacyScriptEasySuppressed: Boolean(window.GO_CHU_LEGACY_SCRIPT_EASY_SUPPRESSED)
         };
